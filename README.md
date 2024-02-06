@@ -7,7 +7,6 @@ The following hashes are supported:
 * Average Hash
 * Difference Hash
 * Perceptual Hash
-* RGBA Hash
 
 The links will take you to more detailed explainations found in the `/docs`-folder.
 
