@@ -1,5 +1,11 @@
 use std::path::Path;
 
+pub enum ResizeMode {
+    Fit,
+    Fill,
+    Stretch,
+}
+
 /// Represents a hash of an image.
 pub struct ImageHash {
     pub matrix: Vec<Vec<bool>>,
@@ -52,3 +58,4 @@ pub trait ImageHasher {
 }
 
 pub mod average;
+mod resize;
