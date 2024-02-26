@@ -13,16 +13,22 @@ impl ImageHash {
     pub fn python_safe_encode(&self) -> String {
         let mut result = "".to_string();
 
+        let mut flattened = self.flatten();
+        if flattened.is_empty() {
+            panic!("Cannot encode an empty matrix")
+        }
+
         // the Python package essentially pads the entire bit array with 0s
         // until it is cleanly encodable into hexadecimal characters.
         // this part essentially does the same thing.
-        let mut flattened = self.flatten();
         if flattened.len() % 4 != 0 {
             let padding = 4 - (flattened.len() % 4);
+
             for _ in 0..padding {
                 flattened.push(false);
-                flattened.rotate_right(padding)
             }
+
+            flattened.rotate_right(padding)
         }
 
         // we convert the bit array one character at a time
@@ -50,10 +56,16 @@ impl ImageHash {
     pub fn python_safe_decode(s: &str, width: usize, height: usize) -> Option<ImageHash> {
         // first we validate that the width and height actually make sense with the given string
         let total_length = width * height;
-        let possible_max = s.len() * 4;
 
-        if total_length > possible_max || total_length < possible_max - 4 {
-            panic!("The string is too short to fill the matrix");
+        // guard against too small values
+        if total_length == 0 {
+            return None;
+        }
+
+        // guard against a string that is too short or too long for the specified size
+        let padded_length = total_length + (total_length % 4);
+        if padded_length / 4 != s.len() {
+            return None;
         }
 
         // the python package essentially pads the entire bit array with 0s to make
@@ -65,10 +77,7 @@ impl ImageHash {
         }
 
         // we create a matrix of the correct size
-        let mut matrix: Vec<Vec<bool>> = vec![vec![false; width]; height];
-
-        let mut row = 0;
-        let mut col = 0;
+        let mut bits: Vec<bool> = vec![];
         for (i, b) in s.chars().enumerate() {
             // TODO: unwrap is not safe here
             let digit = b.to_ascii_lowercase().to_digit(16).unwrap();
@@ -84,15 +93,15 @@ impl ImageHash {
             for i in start..4 {
                 // we extract the bit from the digit
                 let bit = (digit >> (3 - i)) & 1;
-                matrix[row][col] = bit == 1;
-
-                // increment the column and row if needed
-                col += 1;
-                if col == width {
-                    col = 0;
-                    row += 1;
-                }
+                bits.push(bit == 1)
             }
+        }
+
+        let matrix: Vec<Vec<bool>> = bits.chunks(width).map(|x: &[bool]| x.to_vec()).collect();
+
+        // sanity checks
+        if matrix.len() != height || matrix.last().unwrap().len() != width {
+            return None;
         }
 
         Some(ImageHash { matrix })
@@ -104,9 +113,10 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_image_hash_to_string_without_padding() {
+    fn test_image_hash_python_safe_encoding() {
         // Arrange
-        // -> resulting bit str: 00100100 11110000
+
+        // -> resulting bit str: 0010 0100 1111 0000
         // -> resulting hex str: 24F0
         let hash = ImageHash {
             matrix: vec![
@@ -122,9 +132,10 @@ mod tests {
     }
 
     #[test]
-    fn test_image_hash_to_string_with_padding() {
+    fn test_image_hash_python_safe_encoding_with_non_square_matrix() {
         // Arrange
-        // -> resulting bit str: 01101010 00111110 0001
+
+        // -> resulting bit str: 0110 1010 0011 1110 0001
         // -> resulting hex str: 6A3E1
         let hash = ImageHash {
             matrix: vec![
@@ -140,10 +151,13 @@ mod tests {
     }
 
     #[test]
-    fn test_image_hash_to_string_with_uneven() {
+    fn test_image_hash_python_safe_encoding_with_uneven_total_bits() {
         // Arrange
-        // -> resulting bit str: 0110 1010 0001 1111
-        // -> resulting hex str: 6A1F
+
+        // due to the uneven number of bits, the entire bit string gets padded until
+        // it is divisible by 4
+        // -> resulting bit str: 0011 0101 0001 1111
+        // -> resulting hex str: 351F
         let hash = ImageHash {
             matrix: vec![
                 vec![false, true, true, false, true],
@@ -156,22 +170,28 @@ mod tests {
         assert_eq!(hash.python_safe_encode(), "351f");
     }
 
-    // #[test]
-    // fn test_image_hash_from_string() {
-    //     let hash = ImageHash::from_string("aa55aa55aa55aa55", 8, 8);
+    #[test]
+    #[should_panic(expected = "Cannot encode an empty matrix")]
+    fn test_image_hash_python_safe_encoding_with_empty_matrix() {
+        // Arrange
+        let hash = ImageHash { matrix: vec![] };
 
-    //     assert_eq!(
-    //         hash.matrix,
-    //         vec![
-    //             vec![true, false, true, false, true, false, true, false],
-    //             vec![false, true, false, true, false, true, false, true],
-    //             vec![true, false, true, false, true, false, true, false],
-    //             vec![false, true, false, true, false, true, false, true],
-    //             vec![true, false, true, false, true, false, true, false],
-    //             vec![false, true, false, true, false, true, false, true],
-    //             vec![true, false, true, false, true, false, true, false],
-    //             vec![false, true, false, true, false, true, false, true],
-    //         ]
-    //     );
-    // }
+        // Assert
+        hash.python_safe_encode(); // <- should panic
+    }
+
+    #[test]
+    fn test_image_hash_python_safe_encoding_with_single_bit() {
+        // Arrange
+
+        // should equal to 1 due to added padding
+        // -> resulting bit str: 0001
+        // -> resulting hex str: 1
+        let hash = ImageHash {
+            matrix: vec![vec![true]],
+        };
+
+        // Assert
+        assert_eq!(hash.python_safe_encode(), "1");
+    }
 }
