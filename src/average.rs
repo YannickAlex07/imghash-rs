@@ -1,10 +1,9 @@
-use crate::{ImageHash, ImageHasher, ResizeMode};
+use crate::{ImageHash, ImageHasher};
 use std::path::Path;
 
 pub struct AverageHasher {
     pub width: usize,
     pub height: usize,
-    pub resize_mode: ResizeMode,
 }
 
 impl ImageHasher for AverageHasher {
@@ -24,7 +23,6 @@ impl Default for AverageHasher {
         AverageHasher {
             width: 8,
             height: 8,
-            resize_mode: ResizeMode::Fit,
         }
     }
 }
@@ -33,7 +31,7 @@ impl Default for AverageHasher {
 mod tests {
     use super::*;
 
-    const TEST_DATA_FOLDER: &str = "test.jpg";
+    const TEST_IMG: &str = "./../data/test.jpg";
 
     #[test]
     fn test_average_hash_from_path() {
@@ -43,7 +41,7 @@ mod tests {
         };
 
         // Act
-        let hash = hasher.hash_from_path(Path::new(TEST_DATA_FOLDER));
+        let hash = hasher.hash_from_path(Path::new(TEST_IMG));
 
         // Assert
         assert_eq!(hash.matrix.len(), 8);
