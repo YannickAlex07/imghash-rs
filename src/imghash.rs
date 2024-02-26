@@ -65,9 +65,13 @@ impl ImageHash {
         }
 
         // guard against a string that is too short or too long for the specified size
-        let padded_length = total_length + (4 - (total_length % 4));
-        if padded_length / 4 != s.len() {
-            return None;
+        match total_length % 4 {
+            0 => (),
+            remainder => {
+                if (total_length + (4 - remainder)) / 4 != s.len() {
+                    return None;
+                }
+            }
         }
 
         // the python package essentially pads the entire bit array with 0s to make
