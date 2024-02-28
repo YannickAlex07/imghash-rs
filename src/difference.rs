@@ -53,7 +53,7 @@ mod tests {
 
     use super::*;
 
-    const TEST_IMG: &str = "./data/test.png";
+    const TEST_IMG: &str = "./data/img/test.png";
 
     #[test]
     fn test_difference_hash_from_img() {

@@ -20,12 +20,12 @@ mod tests {
     #[test]
     fn test_convert() {
         // Arrange
-        let test_img = ImageReader::open(Path::new("./data/test.png"))
+        let test_img = ImageReader::open(Path::new("./data/img/test.png"))
             .unwrap()
             .decode()
             .unwrap();
 
-        let converted_img = ImageReader::open(Path::new("./data/convert/converted.png"))
+        let converted_img = ImageReader::open(Path::new("./data/img/convert.png"))
             .unwrap()
             .decode()
             .unwrap();
