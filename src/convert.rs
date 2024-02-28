@@ -20,7 +20,7 @@ mod tests {
     #[test]
     fn test_convert() {
         // Arrange
-        let test_img = ImageReader::open(Path::new("./data/convert/test.png"))
+        let test_img = ImageReader::open(Path::new("./data/test.png"))
             .unwrap()
             .decode()
             .unwrap();

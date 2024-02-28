@@ -11,7 +11,7 @@ pub trait ImageHasher {
     /// # Returns
     ///
     /// The generated image hash.
-    fn hash_from_path(&self, path: &Path) -> ImageHash;
+    fn hash_from_path(&self, path: &Path) -> Result<ImageHash, ImageError>;
 
     /// Generates a hash for a given image.
     ///
@@ -28,5 +28,7 @@ pub trait ImageHasher {
 pub mod average;
 mod convert;
 mod imghash;
+
+use image::ImageError;
 
 pub use crate::imghash::ImageHash;
