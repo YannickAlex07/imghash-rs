@@ -27,6 +27,7 @@ pub trait ImageHasher {
 
 pub mod average;
 mod convert;
+pub mod difference;
 mod imghash;
 
 use image::ImageError;

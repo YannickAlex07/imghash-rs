@@ -1,14 +1,15 @@
+use std::path::Path;
+
 use image::ImageError;
 
 use crate::{convert::Convert, ImageHash, ImageHasher};
-use std::path::Path;
 
-pub struct AverageHasher {
+pub struct DifferenceHasher {
     pub width: u32,
     pub height: u32,
 }
 
-impl ImageHasher for AverageHasher {
+impl ImageHasher for DifferenceHasher {
     fn hash_from_path(&self, path: &Path) -> Result<ImageHash, ImageError> {
         match image::io::Reader::open(path)?.decode() {
             Ok(img) => Ok(self.hash_from_img(&img)),
@@ -17,40 +18,34 @@ impl ImageHasher for AverageHasher {
     }
 
     fn hash_from_img(&self, img: &image::DynamicImage) -> ImageHash {
-        let converted = self.convert(img, self.width, self.height);
-        let mean: usize = converted
+        let converted = self.convert(img, self.width + 1, self.height);
+        let compare_matrix: Vec<Vec<u8>> = converted
             .as_bytes()
             .to_vec()
-            .iter()
-            .fold(0, |acc, x| acc + *x as usize)
-            / (self.width * self.height) as usize;
-
-        let mut bits = vec![false; (self.width * self.height) as usize];
-        for (i, p) in converted.as_bytes().to_vec().iter().enumerate() {
-            if *p as usize > mean {
-                bits[i] = true;
-            }
-        }
-
-        let matrix = bits
-            .chunks(self.width as usize)
+            .chunks((self.width + 1) as usize)
             .map(|x| x.to_vec())
             .collect();
+
+        let mut matrix: Vec<Vec<bool>> = vec![];
+        for row in &compare_matrix {
+            let r: Vec<bool> = row.windows(2).map(|window| window[0] < window[1]).collect();
+            matrix.push(r);
+        }
 
         ImageHash { matrix }
     }
 }
 
-impl Default for AverageHasher {
+impl Default for DifferenceHasher {
     fn default() -> Self {
-        AverageHasher {
+        DifferenceHasher {
             width: 8,
             height: 8,
         }
     }
 }
 
-impl Convert for AverageHasher {}
+impl Convert for DifferenceHasher {}
 
 #[cfg(test)]
 mod tests {
@@ -61,14 +56,14 @@ mod tests {
     const TEST_IMG: &str = "./data/test.png";
 
     #[test]
-    fn test_average_hash_from_img() {
+    fn test_difference_hash_from_img() {
         // Arrange
         let img = ImageReader::open(Path::new(TEST_IMG))
             .unwrap()
             .decode()
             .unwrap();
 
-        let hasher = AverageHasher {
+        let hasher = DifferenceHasher {
             ..Default::default()
         };
 
@@ -76,13 +71,13 @@ mod tests {
         let hash = hasher.hash_from_img(&img);
 
         // Assert
-        assert_eq!(hash.python_safe_encode(), "ffffff0e00000301")
+        assert_eq!(hash.python_safe_encode(), "c49b397ed9ea0627")
     }
 
     #[test]
-    fn test_average_hash_from_path() {
+    fn test_difference_hash_from_path() {
         // Arrange
-        let hasher = AverageHasher {
+        let hasher = DifferenceHasher {
             ..Default::default()
         };
 
@@ -91,15 +86,15 @@ mod tests {
 
         // Assert
         match hash {
-            Ok(hash) => assert_eq!(hash.python_safe_encode(), "ffffff0e00000301"),
+            Ok(hash) => assert_eq!(hash.python_safe_encode(), "c49b397ed9ea0627"),
             Err(_) => assert!(false),
         }
     }
 
     #[test]
-    fn test_average_hash_from_nonexisting_path() {
+    fn test_difference_hash_from_nonexisting_path() {
         // Arrange
-        let hasher = AverageHasher {
+        let hasher = DifferenceHasher {
             ..Default::default()
         };
 
