@@ -15,7 +15,10 @@ Cargo.lock
 
 
 # Added by cargo
-
 /target
+
+# Coverage
+*-coverage.html
+/coverage
 
 .DS_Store

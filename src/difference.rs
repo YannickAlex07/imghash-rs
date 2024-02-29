@@ -87,7 +87,7 @@ mod tests {
         // Assert
         match hash {
             Ok(hash) => assert_eq!(hash.python_safe_encode(), "c49b397ed9ea0627"),
-            Err(_) => assert!(false),
+            Err(err) => panic!("could not read image: {:?}", err),
         }
     }
 
@@ -103,8 +103,8 @@ mod tests {
 
         // Assert
         match hash {
-            Ok(hash) => assert!(false, "found hash for non-existing image: {:?}", hash),
-            Err(_) => assert!(true),
+            Ok(hash) => panic!("found hash for non-existing image: {:?}", hash),
+            Err(_) => (),
         }
     }
 }
