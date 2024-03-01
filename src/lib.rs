@@ -26,9 +26,12 @@ pub trait ImageHasher {
 }
 
 pub mod average;
-mod convert;
 pub mod difference;
+pub mod perceptual;
+
+mod convert;
 mod imghash;
+mod math;
 
 use image::ImageError;
 
