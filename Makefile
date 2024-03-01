@@ -31,7 +31,7 @@ coverage:
 	cargo tarpaulin --out Html
 
 	@echo "\nMoving coverage report to ./coverage"
-	@mkdir coverage
+	@mkdir -p coverage
 	@mv tarpaulin-report.html ./coverage/index.html
 
 	$(OPEN) coverage/index.html
