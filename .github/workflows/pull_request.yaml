@@ -57,11 +57,9 @@ jobs:
         with:
           toolchain: stable
 
-      - name: Install Bininstall
-        uses: cargo-bins/cargo-binstall@main
-
-      - name: Install Tarpaulin
-        run: cargo binstall cargo-tarpaulin
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-tarpaulin
 
       - name: Generate coverage
         run: cargo tarpaulin --out Lcov --engine llvm
