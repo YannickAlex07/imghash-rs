@@ -54,15 +54,18 @@ impl ImageHash {
     /// it allows the decoding of hashes that have been generated on non-square matricies. This is because
     /// the original package actually only allows the generation of hashes on square matricies, however this
     /// crate does allow arbitrary dimensions.
-    pub fn decode(s: &str, width: usize, height: usize) -> Option<ImageHash> {
-        // TODO: make this return a result instead of an option
-
+    pub fn decode(s: &str, width: usize, height: usize) -> Result<ImageHash, String> {
         // first we validate that the width and height actually make sense with the given string
         let total_length = width * height;
 
         // guard against too small values
         if total_length == 0 {
-            return None;
+            return Err("Width and height cannot be 0".to_string());
+        }
+
+        // validate that s is a valid string
+        if s.len() == 0 {
+            return Err("String is empty".to_string());
         }
 
         // guard against a string that is too short or too long for the specified size
@@ -70,7 +73,9 @@ impl ImageHash {
             0 => (),
             remainder => {
                 if (total_length + (4 - remainder)) / 4 != s.len() {
-                    return None;
+                    return Err(
+                        "String is too short or too long for the specified size".to_string()
+                    );
                 }
             }
         }
@@ -86,7 +91,10 @@ impl ImageHash {
         // we create a matrix of the correct size
         let mut bits: Vec<bool> = vec![];
         for (i, b) in s.chars().enumerate() {
-            let digit = b.to_ascii_lowercase().to_digit(16)?;
+            let digit = b.to_ascii_lowercase().to_digit(16);
+            if digit.is_none() {
+                return Err("invalid digit found in string".to_string());
+            }
 
             // we add the necessary skip that we calculated earlier
             // for the first character
@@ -98,7 +106,7 @@ impl ImageHash {
             // goes through each of the 4 bits that makes up our hexadecimal character
             for i in start..4 {
                 // we extract the bit from the digit
-                let bit = (digit >> (3 - i)) & 1;
+                let bit = (digit.unwrap() >> (3 - i)) & 1;
                 bits.push(bit == 1)
             }
         }
@@ -107,10 +115,12 @@ impl ImageHash {
 
         // sanity checks
         if matrix.len() != height || matrix.last().unwrap().len() != width {
-            return None;
+            return Err(
+                "Matrix dimensions do not match the specified width and height".to_string(),
+            );
         }
 
-        Some(ImageHash { matrix })
+        Ok(ImageHash { matrix })
     }
 }
 
@@ -291,7 +301,10 @@ mod tests {
         let decoded = ImageHash::decode("AB", 2, 5);
 
         // Assert
-        assert!(decoded.is_none());
+        match decoded {
+            Ok(_) => panic!("Should not have decoded"),
+            Err(e) => assert_eq!(e, "String is too short or too long for the specified size"),
+        }
     }
 
     #[test]
@@ -300,7 +313,10 @@ mod tests {
         let decoded = ImageHash::decode("ABCD", 2, 2);
 
         // Assert
-        assert!(decoded.is_none());
+        match decoded {
+            Ok(_) => panic!("Should not have decoded"),
+            Err(e) => assert_eq!(e, "String is too short or too long for the specified size"),
+        }
     }
 
     #[test]
@@ -309,6 +325,9 @@ mod tests {
         let decoded = ImageHash::decode("A!", 2, 2);
 
         // Assert
-        assert!(decoded.is_none());
+        match decoded {
+            Ok(_) => panic!("Should not have decoded"),
+            Err(e) => assert_eq!(e, "invalid digit found in string"),
+        }
     }
 }
