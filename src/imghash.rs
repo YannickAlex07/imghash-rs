@@ -70,7 +70,13 @@ impl ImageHash {
 
         // guard against a string that is too short or too long for the specified size
         match total_length % 4 {
-            0 => (),
+            0 => {
+                if total_length / 4 != s.len() {
+                    return Err(
+                        "String is too short or too long for the specified size".to_string()
+                    );
+                }
+            }
             remainder => {
                 if (total_length + (4 - remainder)) / 4 != s.len() {
                     return Err(
@@ -322,7 +328,7 @@ mod tests {
     #[test]
     fn test_image_hash_decoding_with_invalid_string() {
         // Act
-        let decoded = ImageHash::decode("A!", 2, 2);
+        let decoded = ImageHash::decode("!", 2, 2);
 
         // Assert
         match decoded {
