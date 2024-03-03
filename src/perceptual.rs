@@ -1,11 +1,8 @@
-use image::ImageError;
-
 use crate::{
     convert::Convert,
     math::{dct2_over_matrix, median, Axis},
     ImageHash, ImageHasher,
 };
-use std::path::Path;
 
 pub struct PerceptualHasher {
     pub width: u32,
@@ -14,13 +11,6 @@ pub struct PerceptualHasher {
 }
 
 impl ImageHasher for PerceptualHasher {
-    fn hash_from_path(&self, path: &Path) -> Result<ImageHash, ImageError> {
-        match image::io::Reader::open(path)?.decode() {
-            Ok(img) => Ok(self.hash_from_img(&img)),
-            Err(e) => Err(e),
-        }
-    }
-
     fn hash_from_img(&self, img: &image::DynamicImage) -> ImageHash {
         let high_freq = self.convert(img, self.width * self.factor, self.height * self.factor);
 
@@ -74,6 +64,8 @@ impl Convert for PerceptualHasher {}
 
 #[cfg(test)]
 mod tests {
+    use std::path::Path;
+
     use image::io::Reader as ImageReader;
 
     use super::*;
@@ -96,7 +88,7 @@ mod tests {
         let hash = hasher.hash_from_img(&img);
 
         // Assert
-        assert_eq!(hash.python_safe_encode(), "157d1d1b193c7c1c")
+        assert_eq!(hash.encode(), "157d1d1b193c7c1c")
     }
 
     #[test]
@@ -111,7 +103,7 @@ mod tests {
 
         // Assert
         match hash {
-            Ok(hash) => assert_eq!(hash.python_safe_encode(), "157d1d1b193c7c1c"),
+            Ok(hash) => assert_eq!(hash.encode(), "157d1d1b193c7c1c"),
             Err(err) => panic!("could not read image: {:?}", err),
         }
     }

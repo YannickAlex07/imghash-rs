@@ -1,7 +1,4 @@
-use image::ImageError;
-
 use crate::{convert::Convert, ImageHash, ImageHasher};
-use std::path::Path;
 
 pub struct AverageHasher {
     pub width: u32,
@@ -9,13 +6,6 @@ pub struct AverageHasher {
 }
 
 impl ImageHasher for AverageHasher {
-    fn hash_from_path(&self, path: &Path) -> Result<ImageHash, ImageError> {
-        match image::io::Reader::open(path)?.decode() {
-            Ok(img) => Ok(self.hash_from_img(&img)),
-            Err(e) => Err(e),
-        }
-    }
-
     fn hash_from_img(&self, img: &image::DynamicImage) -> ImageHash {
         let converted = self.convert(img, self.width, self.height);
         let mean: usize = converted
@@ -54,6 +44,8 @@ impl Convert for AverageHasher {}
 
 #[cfg(test)]
 mod tests {
+    use std::path::Path;
+
     use image::io::Reader as ImageReader;
 
     use super::*;
@@ -76,7 +68,7 @@ mod tests {
         let hash = hasher.hash_from_img(&img);
 
         // Assert
-        assert_eq!(hash.python_safe_encode(), "ffffff0e00000301")
+        assert_eq!(hash.encode(), "ffffff0e00000301")
     }
 
     #[test]
@@ -91,7 +83,7 @@ mod tests {
 
         // Assert
         match hash {
-            Ok(hash) => assert_eq!(hash.python_safe_encode(), "ffffff0e00000301"),
+            Ok(hash) => assert_eq!(hash.encode(), "ffffff0e00000301"),
             Err(err) => panic!("could not read image: {:?}", err),
         }
     }

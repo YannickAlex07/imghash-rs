@@ -1,7 +1,3 @@
-use std::path::Path;
-
-use image::ImageError;
-
 use crate::{convert::Convert, ImageHash, ImageHasher};
 
 pub struct DifferenceHasher {
@@ -10,13 +6,6 @@ pub struct DifferenceHasher {
 }
 
 impl ImageHasher for DifferenceHasher {
-    fn hash_from_path(&self, path: &Path) -> Result<ImageHash, ImageError> {
-        match image::io::Reader::open(path)?.decode() {
-            Ok(img) => Ok(self.hash_from_img(&img)),
-            Err(e) => Err(e),
-        }
-    }
-
     fn hash_from_img(&self, img: &image::DynamicImage) -> ImageHash {
         let converted = self.convert(img, self.width + 1, self.height);
         let compare_matrix: Vec<Vec<u8>> = converted
@@ -49,6 +38,8 @@ impl Convert for DifferenceHasher {}
 
 #[cfg(test)]
 mod tests {
+    use std::path::Path;
+
     use image::io::Reader as ImageReader;
 
     use super::*;
@@ -71,7 +62,7 @@ mod tests {
         let hash = hasher.hash_from_img(&img);
 
         // Assert
-        assert_eq!(hash.python_safe_encode(), "c49b397ed9ea0627")
+        assert_eq!(hash.encode(), "c49b397ed9ea0627")
     }
 
     #[test]
@@ -86,7 +77,7 @@ mod tests {
 
         // Assert
         match hash {
-            Ok(hash) => assert_eq!(hash.python_safe_encode(), "c49b397ed9ea0627"),
+            Ok(hash) => assert_eq!(hash.encode(), "c49b397ed9ea0627"),
             Err(err) => panic!("could not read image: {:?}", err),
         }
     }

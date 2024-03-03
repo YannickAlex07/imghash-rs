@@ -1,3 +1,4 @@
+use image::ImageError;
 use std::path::Path;
 
 /// Trait for generating image hashes
@@ -11,7 +12,12 @@ pub trait ImageHasher {
     /// # Returns
     ///
     /// The generated image hash.
-    fn hash_from_path(&self, path: &Path) -> Result<ImageHash, ImageError>;
+    fn hash_from_path(&self, path: &Path) -> Result<ImageHash, ImageError> {
+        match image::io::Reader::open(path)?.decode() {
+            Ok(img) => Ok(self.hash_from_img(&img)),
+            Err(e) => Err(e),
+        }
+    }
 
     /// Generates a hash for a given image.
     ///
@@ -25,14 +31,15 @@ pub trait ImageHasher {
     fn hash_from_img(&self, img: &image::DynamicImage) -> ImageHash;
 }
 
+// public modules
 pub mod average;
 pub mod difference;
 pub mod perceptual;
 
+// private modules
 mod convert;
 mod imghash;
 mod math;
 
-use image::ImageError;
-
+// public exports
 pub use crate::imghash::ImageHash;
