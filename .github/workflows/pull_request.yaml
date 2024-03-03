@@ -45,6 +45,9 @@ jobs:
         run: make lint
 
   coverage:
+    permissions:
+      contents: write
+      pull-requests: write
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -54,13 +57,16 @@ jobs:
         with:
           toolchain: stable
 
-      - name: Install Cargo Tarpaulin
-        run: cargo install cargo-tarpaulin
+      - name: Install Bininstall
+        uses: cargo-bins/cargo-binstall@main
+
+      - name: Install Tarpaulin
+        run: cargo binstall cargo-tarpaulin
 
       - name: Generate coverage
         run: cargo tarpaulin --out Lcov --engine llvm
 
-      - name: Upload coverage to Codecov
+      - name: Post Coverage
         uses: romeovs/lcov-reporter-action@v0.2.16
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
