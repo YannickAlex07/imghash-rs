@@ -2,7 +2,7 @@
 name = "imghash"
 version = "0.1.0"
 
-description = "A simple image hashing library for Rust"
+description = "Image hashing for Rust"
 readme = "README.md"
 authors = ["Yannick Alexander"]
 
