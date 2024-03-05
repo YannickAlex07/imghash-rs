@@ -60,7 +60,7 @@ impl ImageHash {
 
         // guard against too small values
         if total_length == 0 {
-            return Err("Width and height cannot be 0".to_string());
+            return Err("Width or height cannot be 0".to_string());
         }
 
         // validate that s is a valid string
@@ -334,6 +334,30 @@ mod tests {
         match decoded {
             Ok(_) => panic!("Should not have decoded"),
             Err(e) => assert_eq!(e, "invalid digit found in string"),
+        }
+    }
+
+    #[test]
+    fn test_image_hash_decoding_with_zero_size_matrix() {
+        // Act
+        let decoded = ImageHash::decode("!", 2, 0);
+
+        // Assert
+        match decoded {
+            Ok(_) => panic!("Should not have decoded"),
+            Err(e) => assert_eq!(e, "Width or height cannot be 0"),
+        }
+    }
+
+    #[test]
+    fn test_image_hash_decoding_with_empty_string() {
+        // Act
+        let decoded = ImageHash::decode("", 2, 2);
+
+        // Assert
+        match decoded {
+            Ok(_) => panic!("Should not have decoded"),
+            Err(e) => assert_eq!(e, "String is empty"),
         }
     }
 }

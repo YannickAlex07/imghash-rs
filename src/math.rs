@@ -107,6 +107,18 @@ mod tests {
     }
 
     #[test]
+    fn test_dct2_with_empty_input() {
+        // Arrange
+        let input = vec![];
+
+        // Act
+        let result = dct2(&input);
+
+        // Assert
+        assert_eq!(result, vec![]);
+    }
+
+    #[test]
     fn test_dct2_over_matrix_rows() {
         // Arrange
         let input = vec![vec![1., 2.], vec![3., 4.]];
@@ -134,5 +146,65 @@ mod tests {
             result,
             vec![[8.0, -2.82842712474619], [12.0, -2.8284271247461894]]
         );
+    }
+
+    #[test]
+    fn test_dct2_over_matrix_with_empty_rows() {
+        // Arrange
+        let input = vec![vec![]];
+
+        // Act
+        let result = dct2_over_matrix(&input, Axis::Row);
+
+        // Assert
+        assert_eq!(result, input);
+    }
+
+    #[test]
+    fn test_dct2_over_matrix_with_empty_columns() {
+        // Arrange
+        let input = vec![];
+
+        // Act
+        let result = dct2_over_matrix(&input, Axis::Column);
+
+        // Assert
+        assert_eq!(result, input);
+    }
+
+    #[test]
+    fn test_median_with_even_numbers() {
+        // Arrange
+        let input = vec![3., 2., 1., 4.];
+
+        // Act
+        let result = median(&input);
+
+        // Assert
+        assert_eq!(result, Some(2.5));
+    }
+
+    #[test]
+    fn test_median_with_uneven_numbers() {
+        // Arrange
+        let input = vec![3., 4., 1., 2., 5.];
+
+        // Act
+        let result = median(&input);
+
+        // Assert
+        assert_eq!(result, Some(3.));
+    }
+
+    #[test]
+    fn test_median_with_empty_vector() {
+        // Arrange
+        let input = vec![];
+
+        // Act
+        let result = median(&input);
+
+        // Assert
+        assert_eq!(result, None);
     }
 }

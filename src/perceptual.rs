@@ -71,6 +71,7 @@ mod tests {
     use super::*;
 
     const TEST_IMG: &str = "./data/img/test.png";
+    const TXT_FILE: &str = "./data/misc/test.txt";
 
     #[test]
     fn test_perceptual_hash_from_img() {
@@ -117,6 +118,23 @@ mod tests {
 
         // Act
         let hash = hasher.hash_from_path(Path::new("./does/not/exist.png"));
+
+        // Assert
+        match hash {
+            Ok(hash) => panic!("found hash for non-existing image: {:?}", hash),
+            Err(_) => (),
+        }
+    }
+
+    #[test]
+    fn test_perceptual_hash_from_txt_file() {
+        // Arrange
+        let hasher = PerceptualHasher {
+            ..Default::default()
+        };
+
+        // Act
+        let hash = hasher.hash_from_path(Path::new(TXT_FILE));
 
         // Assert
         match hash {
