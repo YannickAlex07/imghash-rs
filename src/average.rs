@@ -1,7 +1,10 @@
 use crate::{convert::Convert, ImageHash, ImageHasher};
 
 pub struct AverageHasher {
+    /// The target width of the matrix
     pub width: u32,
+
+    /// The target height of the matrix
     pub height: u32,
 }
 

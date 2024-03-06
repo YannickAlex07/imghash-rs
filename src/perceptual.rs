@@ -5,8 +5,14 @@ use crate::{
 };
 
 pub struct PerceptualHasher {
+    /// The target width of the matrix
     pub width: u32,
+
+    /// The target height of the matrix
     pub height: u32,
+
+    /// The factor for the DCT matrix. We will rescale the image to (width * height) * 4
+    /// before we calculate the DCT on it.
     pub factor: u32,
 }
 
@@ -14,7 +20,7 @@ impl ImageHasher for PerceptualHasher {
     fn hash_from_img(&self, img: &image::DynamicImage) -> ImageHash {
         let high_freq = self.convert(img, self.width * self.factor, self.height * self.factor);
 
-        // convert the higher frequency image to a matrix
+        // convert the higher frequency image to a matrix of f64
         let high_freq_bytes = high_freq.as_bytes().to_vec();
         let high_freq_matrix: Vec<Vec<f64>> = high_freq_bytes
             .chunks((self.width * self.factor) as usize)
@@ -27,7 +33,7 @@ impl ImageHasher for PerceptualHasher {
             Axis::Row,
         );
 
-        // now we rescale the dct matrix to the actual given width and height
+        // now we crop the dct matrix to the actual target width and height
         let scaled_matrix: Vec<Vec<f64>> = dct_matrix
             .iter()
             .take(self.height as usize)

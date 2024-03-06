@@ -1,13 +1,18 @@
 use crate::{convert::Convert, ImageHash, ImageHasher};
 
 pub struct DifferenceHasher {
+    /// The target width of the matrix
     pub width: u32,
+
+    /// The target height of the matrix
     pub height: u32,
 }
 
 impl ImageHasher for DifferenceHasher {
     fn hash_from_img(&self, img: &image::DynamicImage) -> ImageHash {
         let converted = self.convert(img, self.width + 1, self.height);
+
+        // we will compute the differences on this matrix
         let compare_matrix: Vec<Vec<u8>> = converted
             .as_bytes()
             .to_vec()
@@ -15,6 +20,7 @@ impl ImageHasher for DifferenceHasher {
             .map(|x| x.to_vec())
             .collect();
 
+        // the results are stored in this matrix
         let mut matrix: Vec<Vec<bool>> = vec![];
         for row in &compare_matrix {
             let r: Vec<bool> = row.windows(2).map(|window| window[0] < window[1]).collect();

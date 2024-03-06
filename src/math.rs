@@ -6,6 +6,15 @@ pub enum Axis {
     Column,
 }
 
+/// Computes the DCT 2 for a given slice of floats.
+/// The implementation follows the NumPy implementation.
+/// TODO: Add link to numpy here!
+///
+/// # Arguments
+/// * `input`: A reference to a slice of floats
+///
+/// # Returns
+/// * A vector with the transformed values
 pub fn dct2(input: &[f64]) -> Vec<f64> {
     // we cannot compute the DCT for an empty input
     if input.is_empty() {
@@ -32,6 +41,15 @@ pub fn dct2(input: &[f64]) -> Vec<f64> {
         .collect()
 }
 
+/// Computes the DCT 2 over a matrix. The axis controls if the DCT
+/// is computed over the columns or over each column.
+///
+/// # Arguments
+/// * `input`: A reference to a matrix of floats
+/// * `axis`: The axis over which to compute the DCT 2
+///
+/// # Returns
+/// * A matrix with the modified values
 pub fn dct2_over_matrix(input: &Vec<Vec<f64>>, axis: Axis) -> Vec<Vec<f64>> {
     // we cannot compute the DCT for an empty matrix
     if input.is_empty() || input[0].is_empty() {
@@ -66,6 +84,14 @@ pub fn dct2_over_matrix(input: &Vec<Vec<f64>>, axis: Axis) -> Vec<Vec<f64>> {
     dct_matrix
 }
 
+/// Computes the median for slice of float values.
+///
+/// # Arguments
+/// * `input`: A reference to a slice of floats
+///
+/// # Returns
+/// * Returns a float that represents the median
+/// * Returns `None` if `input` is empty
 pub fn median(input: &[f64]) -> Option<f64> {
     if input.is_empty() {
         return None;
