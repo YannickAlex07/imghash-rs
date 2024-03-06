@@ -13,7 +13,7 @@ The Difference Hash calculates the brightness difference between neighbouring pi
 
 ## Pros & Cons
 
-Like each other hashing algorithm, the average hash algorithm has some pros and cons that are important to know and understand.
+Like each other hashing algorithm, the difference hash algorithm has some pros and cons that are important to know and understand.
 
 #### Pros
 
