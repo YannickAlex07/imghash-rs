@@ -42,8 +42,8 @@ pub trait ImageHasher {
 /// * `height`: The height of the final matrix which will be encoded into the hash
 ///
 /// # Returns
-/// * An [ImageHash]-struct that can be encoded into a string representation
-/// * An [ImageError] if something went wrong while loading the image
+/// * An [`ImageHash`]-struct that can be encoded into a string representation
+/// * An [`ImageError`] if something went wrong while loading the image
 pub fn average_hash(path: &Path, width: u32, height: u32) -> Result<ImageHash, ImageError> {
     // create the hasher
     let hasher = AverageHasher { width, height };
@@ -58,8 +58,8 @@ pub fn average_hash(path: &Path, width: u32, height: u32) -> Result<ImageHash, I
 /// * `height`: The height of the final matrix which will be encoded into the hash
 ///
 /// # Returns
-/// * An [ImageHash]-struct that can be encoded into a string representation
-/// * An [ImageError] if something went wrong while loading the image
+/// * An [`ImageHash`]-struct that can be encoded into a string representation
+/// * An [`ImageError`] if something went wrong while loading the image
 pub fn difference_hash(path: &Path, width: u32, height: u32) -> Result<ImageHash, ImageError> {
     // create the hasher
     let hasher = DifferenceHasher { width, height };
@@ -75,8 +75,8 @@ pub fn difference_hash(path: &Path, width: u32, height: u32) -> Result<ImageHash
 /// * `factor`: The factor by which the input image will be scaled for calculating the DCT
 ///
 /// # Returns
-/// * An [ImageHash]-struct that can be encoded into a string representation
-/// * An [ImageError] if something went wrong while loading the image
+/// * An [`ImageHash`]-struct that can be encoded into a string representation
+/// * An [`ImageError`] if something went wrong while loading the image
 pub fn perceptual_hash(
     path: &Path,
     width: u32,

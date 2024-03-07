@@ -48,11 +48,10 @@ As with every algorithm, the scale is configurable and you can experiment with i
 
 Second step for calculating the DCT 2 for our matrix. We will do two passes here, first we will compute the DCT alongside each column and then again over each row.
 
-The formular that we use for DCT 2 is the one used by NumPy:
+The formular that we use for DCT 2 is the one used by SciPy:
 
-TODO: Finish formular
 $$
-\sum{2x\cos{\frac{\pi k (2 i + 1)}{2n}}}
+y_k = 2\sum_{n=0}^{N-1} x_n\cos{\frac{\pi k (2 n + 1)}{2N}}
 $$
 
 Take the following image matrix as an example:

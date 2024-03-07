@@ -7,8 +7,8 @@ pub enum Axis {
 }
 
 /// Computes the DCT 2 for a given slice of floats.
-/// The implementation follows the NumPy implementation.
-/// TODO: Add link to numpy here!
+/// The implementation follows the SciPy implementation.
+/// https://docs.scipy.org/doc/scipy/reference/generated/scipy.fftpack.dct.html
 ///
 /// # Arguments
 /// * `input`: A reference to a slice of floats
@@ -25,18 +25,19 @@ pub fn dct2(input: &[f64]) -> Vec<f64> {
 
     (0..n)
         .map(|k| {
-            input
-                .iter()
-                .enumerate()
-                .map(|(i, x)| {
-                    let numerator = std::f64::consts::PI * k as f64 * (2 * i + 1) as f64;
-                    let denominator = (2 * n) as f64;
+            2 as f64
+                * input
+                    .iter()
+                    .enumerate()
+                    .map(|(i, x)| {
+                        let numerator = std::f64::consts::PI * k as f64 * (2 * i + 1) as f64;
+                        let denominator = (2 * n) as f64;
 
-                    let cosine = (numerator / denominator).cos();
+                        let cosine = (numerator / denominator).cos();
 
-                    2 as f64 * x * cosine
-                })
-                .sum()
+                        x * cosine
+                    })
+                    .sum::<f64>()
         })
         .collect()
 }

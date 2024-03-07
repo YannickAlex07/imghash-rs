@@ -1,7 +1,7 @@
 use image::{imageops::FilterType, DynamicImage};
 
 pub trait Convert {
-    /// Converts a given [DynamicImage] by conveting it to grayscale and then resizing it
+    /// Converts a given [`DynamicImage`] by conveting it to grayscale and then resizing it
     /// to the specified size.
     ///
     /// # Arguments
