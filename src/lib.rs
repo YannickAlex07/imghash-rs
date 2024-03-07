@@ -34,61 +34,60 @@ pub trait ImageHasher {
     fn hash_from_img(&self, img: &image::DynamicImage) -> ImageHash;
 }
 
-/// Calculate the average hash for an image at the specified path
+/// Calculate the average hash for an image at the specified path. Uses the default
+/// width and height of 8 x 8 pixels. If you want to use something else please directly use
+/// the [`AverageHasher`] struct.
 ///
 /// # Arguments
 /// * `path`: A reference to the path of the image
-/// * `width`: The width of the final matrix which will be encoded into the hash
-/// * `height`: The height of the final matrix which will be encoded into the hash
 ///
 /// # Returns
 /// * An [`ImageHash`]-struct that can be encoded into a string representation
 /// * An [`ImageError`] if something went wrong while loading the image
-pub fn average_hash(path: &Path, width: u32, height: u32) -> Result<ImageHash, ImageError> {
+pub fn average_hash(path: &Path) -> Result<ImageHash, ImageError> {
     // create the hasher
-    let hasher = AverageHasher { width, height };
+    let hasher = AverageHasher {
+        ..Default::default()
+    };
+
     hasher.hash_from_path(path)
 }
 
-/// Calculate the difference hash for an image at the specified path
+/// Calculate the difference hash for an image at the specified path. Uses the default
+/// width and height of 8 x 8 pixels. If you want to use something else please directly use
+/// the [`DifferenceHasher`] struct.
 ///
 /// # Arguments
 /// * `path`: A reference to the path of the image
-/// * `width`: The width of the final matrix which will be encoded into the hash
-/// * `height`: The height of the final matrix which will be encoded into the hash
 ///
 /// # Returns
 /// * An [`ImageHash`]-struct that can be encoded into a string representation
 /// * An [`ImageError`] if something went wrong while loading the image
-pub fn difference_hash(path: &Path, width: u32, height: u32) -> Result<ImageHash, ImageError> {
+pub fn difference_hash(path: &Path) -> Result<ImageHash, ImageError> {
     // create the hasher
-    let hasher = DifferenceHasher { width, height };
+    let hasher = DifferenceHasher {
+        ..Default::default()
+    };
+
     hasher.hash_from_path(path)
 }
 
-/// Calculate the perceptual hash for an image at the specified path
+/// Calculate the perceptual hash for an image at the specified path. Uses the default
+/// width and height of 8 x 8 pixels as well as the default factor of 4.
+/// If you want to use something else please directly use the [`PerceptualHasher`] struct.
 ///
 /// # Arguments
 /// * `path`: A reference to the path of the image
-/// * `width`: The width of the final matrix which will be encoded into the hash
-/// * `height`: The height of the final matrix which will be encoded into the hash
-/// * `factor`: The factor by which the input image will be scaled for calculating the DCT
 ///
 /// # Returns
 /// * An [`ImageHash`]-struct that can be encoded into a string representation
 /// * An [`ImageError`] if something went wrong while loading the image
-pub fn perceptual_hash(
-    path: &Path,
-    width: u32,
-    height: u32,
-    factor: u32,
-) -> Result<ImageHash, ImageError> {
+pub fn perceptual_hash(path: &Path) -> Result<ImageHash, ImageError> {
     // create the hasher
     let hasher = PerceptualHasher {
-        width,
-        height,
-        factor,
+        ..Default::default()
     };
+
     hasher.hash_from_path(path)
 }
 
@@ -118,7 +117,7 @@ mod tests {
         let path = Path::new(TEST_IMG);
 
         // Act
-        let hash = average_hash(path, 8, 8);
+        let hash = average_hash(path);
 
         // Assert
         assert_eq!(hash.unwrap().encode(), "ffffff0e00000301")
@@ -130,7 +129,7 @@ mod tests {
         let path = Path::new(TXT_FILE);
 
         // Act
-        let hash = average_hash(path, 8, 8);
+        let hash = average_hash(path);
 
         // Assert
         match hash {
@@ -145,7 +144,7 @@ mod tests {
         let path = Path::new(TEST_IMG);
 
         // Act
-        let hash = difference_hash(path, 8, 8);
+        let hash = difference_hash(path);
 
         // Assert
         assert_eq!(hash.unwrap().encode(), "c49b397ed9ea0627")
@@ -157,7 +156,7 @@ mod tests {
         let path = Path::new(TXT_FILE);
 
         // Act
-        let hash = difference_hash(path, 8, 8);
+        let hash = difference_hash(path);
 
         // Assert
         match hash {
@@ -172,7 +171,7 @@ mod tests {
         let path = Path::new(TEST_IMG);
 
         // Act
-        let hash = perceptual_hash(path, 8, 8, 4);
+        let hash = perceptual_hash(path);
 
         // Assert
         assert_eq!(hash.unwrap().encode(), "157d1d1b193c7c1c")
@@ -184,7 +183,7 @@ mod tests {
         let path = Path::new(TXT_FILE);
 
         // Act
-        let hash = perceptual_hash(path, 8, 8, 4);
+        let hash = perceptual_hash(path);
 
         // Assert
         match hash {
