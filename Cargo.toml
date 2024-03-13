@@ -1,10 +1,15 @@
 [package]
 name = "imghash"
-version = "0.1.0"
+version = "1.0.0"
 
 description = "Image hashing for Rust"
+
 readme = "README.md"
+license-file = "LICENSE"
+
 authors = ["Yannick Alexander"]
+
+repository = "https://github.com/YannickAlex07/imghash-rs"
 
 edition = "2021"
 

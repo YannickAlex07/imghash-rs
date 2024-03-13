@@ -6,6 +6,8 @@
 
 - [ ] Tests
 - [ ] Documentation
+- [ ] Updated Changelog
+- [ ] Updated Version in Cargo.toml
 
 ## Related Tasks
 
