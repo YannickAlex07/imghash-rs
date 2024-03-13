@@ -86,7 +86,7 @@ impl ImageHash {
             }
         }
 
-        // the python package essentially pads the entire bit array with 0s to make
+        // the encoding essentially pads the entire bit array with 0s to make
         // it encodable. Here we calculate how many bits were padded, which we can then skip
         // in the beginning.
         let mut skip = 0;
