@@ -11,7 +11,7 @@ impl ImageHash {
 
     /// Encodes the bit matrix that represents the [`ImageHash`] into a hexadecimal string.
     /// This implementation is strictly compatible with `imagehash` package for Python.
-    pub fn python_safe_encode(&self) -> String {
+    pub fn encode(&self) -> String {
         let mut result = "".to_string();
 
         let mut flattened = self.flatten();
@@ -54,28 +54,39 @@ impl ImageHash {
     /// it allows the decoding of hashes that have been generated on non-square matricies. This is because
     /// the original package actually only allows the generation of hashes on square matricies, however this
     /// crate does allow arbitrary dimensions.
-    pub fn python_safe_decode(s: &str, width: usize, height: usize) -> Option<ImageHash> {
-        // TODO: make this return a result instead of an option
-
+    pub fn decode(s: &str, width: usize, height: usize) -> Result<ImageHash, String> {
         // first we validate that the width and height actually make sense with the given string
         let total_length = width * height;
 
         // guard against too small values
         if total_length == 0 {
-            return None;
+            return Err("Width or height cannot be 0".to_string());
+        }
+
+        // validate that s is a valid string
+        if s.len() == 0 {
+            return Err("String is empty".to_string());
         }
 
         // guard against a string that is too short or too long for the specified size
         match total_length % 4 {
-            0 => (),
+            0 => {
+                if total_length / 4 != s.len() {
+                    return Err(
+                        "String is too short or too long for the specified size".to_string()
+                    );
+                }
+            }
             remainder => {
                 if (total_length + (4 - remainder)) / 4 != s.len() {
-                    return None;
+                    return Err(
+                        "String is too short or too long for the specified size".to_string()
+                    );
                 }
             }
         }
 
-        // the python package essentially pads the entire bit array with 0s to make
+        // the encoding essentially pads the entire bit array with 0s to make
         // it encodable. Here we calculate how many bits were padded, which we can then skip
         // in the beginning.
         let mut skip = 0;
@@ -86,7 +97,10 @@ impl ImageHash {
         // we create a matrix of the correct size
         let mut bits: Vec<bool> = vec![];
         for (i, b) in s.chars().enumerate() {
-            let digit = b.to_ascii_lowercase().to_digit(16)?;
+            let digit = b.to_ascii_lowercase().to_digit(16);
+            if digit.is_none() {
+                return Err("invalid digit found in string".to_string());
+            }
 
             // we add the necessary skip that we calculated earlier
             // for the first character
@@ -98,7 +112,7 @@ impl ImageHash {
             // goes through each of the 4 bits that makes up our hexadecimal character
             for i in start..4 {
                 // we extract the bit from the digit
-                let bit = (digit >> (3 - i)) & 1;
+                let bit = (digit.unwrap() >> (3 - i)) & 1;
                 bits.push(bit == 1)
             }
         }
@@ -107,10 +121,12 @@ impl ImageHash {
 
         // sanity checks
         if matrix.len() != height || matrix.last().unwrap().len() != width {
-            return None;
+            return Err(
+                "Matrix dimensions do not match the specified width and height".to_string(),
+            );
         }
 
-        Some(ImageHash { matrix })
+        Ok(ImageHash { matrix })
     }
 }
 
@@ -139,7 +155,7 @@ mod tests {
     // PYTHON SAFE ENCODING
 
     #[test]
-    fn test_image_hash_python_safe_encoding() {
+    fn test_image_hash_encoding() {
         // Arrange
 
         // -> resulting bit str: 0010 0100 1111 0000
@@ -154,11 +170,11 @@ mod tests {
         };
 
         // Assert
-        assert_eq!(hash.python_safe_encode(), "24f0");
+        assert_eq!(hash.encode(), "24f0");
     }
 
     #[test]
-    fn test_image_hash_python_safe_encoding_with_non_square_matrix() {
+    fn test_image_hash_encoding_with_non_square_matrix() {
         // Arrange
 
         // -> resulting bit str: 0110 1010 0011 1110 0001
@@ -173,11 +189,11 @@ mod tests {
         };
 
         // Assert
-        assert_eq!(hash.python_safe_encode(), "6a3e1");
+        assert_eq!(hash.encode(), "6a3e1");
     }
 
     #[test]
-    fn test_image_hash_python_safe_encoding_with_uneven_total_bits() {
+    fn test_image_hash_encoding_with_uneven_total_bits() {
         // Arrange
 
         // due to the uneven number of bits, the entire bit string gets padded until
@@ -193,17 +209,17 @@ mod tests {
         };
 
         // Assert
-        assert_eq!(hash.python_safe_encode(), "351f");
+        assert_eq!(hash.encode(), "351f");
     }
 
     #[test]
     #[should_panic(expected = "Cannot encode an empty matrix")]
-    fn test_image_hash_python_safe_encoding_with_empty_matrix() {
+    fn test_image_hash_encoding_with_empty_matrix() {
         // Arrange
         let hash = ImageHash { matrix: vec![] };
 
         // Assert
-        hash.python_safe_encode(); // <- should panic
+        hash.encode(); // <- should panic
     }
 
     #[test]
@@ -218,13 +234,13 @@ mod tests {
         };
 
         // Assert
-        assert_eq!(hash.python_safe_encode(), "1");
+        assert_eq!(hash.encode(), "1");
     }
 
     // PYTHON SAFE DECODING
 
     #[test]
-    fn test_image_hash_python_safe_decoding() {
+    fn test_image_hash_decoding() {
         // Arrange
         let expected = vec![
             vec![false, false, true, false],
@@ -234,14 +250,14 @@ mod tests {
         ];
 
         // Act
-        let decoded = ImageHash::python_safe_decode("24f0", 4, 4).unwrap();
+        let decoded = ImageHash::decode("24f0", 4, 4).unwrap();
 
         // Assert
         assert_eq!(decoded.matrix, expected);
     }
 
     #[test]
-    fn test_image_hash_python_safe_decoding_with_non_square_matrix() {
+    fn test_image_hash_decoding_with_non_square_matrix() {
         // Arrange
         let expected = vec![
             vec![false, true, true, false, true],
@@ -251,14 +267,14 @@ mod tests {
         ];
 
         // Act
-        let decoded = ImageHash::python_safe_decode("6a3e1", 5, 4).unwrap();
+        let decoded = ImageHash::decode("6a3e1", 5, 4).unwrap();
 
         // Assert
         assert_eq!(decoded.matrix, expected);
     }
 
     #[test]
-    fn test_image_hash_python_safe_decoding_with_uneven_total_bits() {
+    fn test_image_hash_decoding_with_uneven_total_bits() {
         // Arrange
         let expected = vec![
             vec![false, true, true, false, true],
@@ -267,48 +283,81 @@ mod tests {
         ];
 
         // Act
-        let decoded = ImageHash::python_safe_decode("351f", 5, 3).unwrap();
+        let decoded = ImageHash::decode("351f", 5, 3).unwrap();
 
         // Assert
         assert_eq!(decoded.matrix, expected);
     }
 
     #[test]
-    fn test_image_hash_python_safe_decoding_with_single_bit() {
+    fn test_image_hash_decoding_with_single_bit() {
         // Arrange
         let expected = vec![vec![true]];
 
         // Act
-        let decoded = ImageHash::python_safe_decode("1", 1, 1).unwrap();
+        let decoded = ImageHash::decode("1", 1, 1).unwrap();
 
         // Assert
         assert_eq!(decoded.matrix, expected);
     }
 
     #[test]
-    fn test_image_hash_python_safe_decoding_with_too_short_string() {
+    fn test_image_hash_decoding_with_too_short_string() {
         // Act
-        let decoded = ImageHash::python_safe_decode("AB", 2, 5);
+        let decoded = ImageHash::decode("AB", 2, 5);
 
         // Assert
-        assert!(decoded.is_none());
+        match decoded {
+            Ok(_) => panic!("Should not have decoded"),
+            Err(e) => assert_eq!(e, "String is too short or too long for the specified size"),
+        }
     }
 
     #[test]
-    fn test_image_hash_python_safe_decoding_with_too_long_string() {
+    fn test_image_hash_decoding_with_too_long_string() {
         // Act
-        let decoded = ImageHash::python_safe_decode("ABCD", 2, 2);
+        let decoded = ImageHash::decode("ABCD", 2, 2);
 
         // Assert
-        assert!(decoded.is_none());
+        match decoded {
+            Ok(_) => panic!("Should not have decoded"),
+            Err(e) => assert_eq!(e, "String is too short or too long for the specified size"),
+        }
     }
 
     #[test]
-    fn test_image_hash_python_safe_decoding_with_invalid_string() {
+    fn test_image_hash_decoding_with_invalid_string() {
         // Act
-        let decoded = ImageHash::python_safe_decode("A!", 2, 2);
+        let decoded = ImageHash::decode("!", 2, 2);
 
         // Assert
-        assert!(decoded.is_none());
+        match decoded {
+            Ok(_) => panic!("Should not have decoded"),
+            Err(e) => assert_eq!(e, "invalid digit found in string"),
+        }
+    }
+
+    #[test]
+    fn test_image_hash_decoding_with_zero_size_matrix() {
+        // Act
+        let decoded = ImageHash::decode("!", 2, 0);
+
+        // Assert
+        match decoded {
+            Ok(_) => panic!("Should not have decoded"),
+            Err(e) => assert_eq!(e, "Width or height cannot be 0"),
+        }
+    }
+
+    #[test]
+    fn test_image_hash_decoding_with_empty_string() {
+        // Act
+        let decoded = ImageHash::decode("", 2, 2);
+
+        // Assert
+        match decoded {
+            Ok(_) => panic!("Should not have decoded"),
+            Err(e) => assert_eq!(e, "String is empty"),
+        }
     }
 }

@@ -1,21 +1,14 @@
-use image::ImageError;
-
 use crate::{convert::Convert, ImageHash, ImageHasher};
-use std::path::Path;
 
 pub struct AverageHasher {
+    /// The target width of the matrix
     pub width: u32,
+
+    /// The target height of the matrix
     pub height: u32,
 }
 
 impl ImageHasher for AverageHasher {
-    fn hash_from_path(&self, path: &Path) -> Result<ImageHash, ImageError> {
-        match image::io::Reader::open(path)?.decode() {
-            Ok(img) => Ok(self.hash_from_img(&img)),
-            Err(e) => Err(e),
-        }
-    }
-
     fn hash_from_img(&self, img: &image::DynamicImage) -> ImageHash {
         let converted = self.convert(img, self.width, self.height);
         let mean: usize = converted
@@ -54,11 +47,14 @@ impl Convert for AverageHasher {}
 
 #[cfg(test)]
 mod tests {
+    use std::path::Path;
+
     use image::io::Reader as ImageReader;
 
     use super::*;
 
     const TEST_IMG: &str = "./data/img/test.png";
+    const TXT_FILE: &str = "./data/misc/test.txt";
 
     #[test]
     fn test_average_hash_from_img() {
@@ -76,7 +72,7 @@ mod tests {
         let hash = hasher.hash_from_img(&img);
 
         // Assert
-        assert_eq!(hash.python_safe_encode(), "ffffff0e00000301")
+        assert_eq!(hash.encode(), "ffffff0e00000301")
     }
 
     #[test]
@@ -91,7 +87,7 @@ mod tests {
 
         // Assert
         match hash {
-            Ok(hash) => assert_eq!(hash.python_safe_encode(), "ffffff0e00000301"),
+            Ok(hash) => assert_eq!(hash.encode(), "ffffff0e00000301"),
             Err(err) => panic!("could not read image: {:?}", err),
         }
     }
@@ -105,6 +101,23 @@ mod tests {
 
         // Act
         let hash = hasher.hash_from_path(Path::new("./does/not/exist.png"));
+
+        // Assert
+        match hash {
+            Ok(hash) => panic!("found hash for non-existing image: {:?}", hash),
+            Err(_) => (),
+        }
+    }
+
+    #[test]
+    fn test_average_hash_from_txt_file() {
+        // Arrange
+        let hasher = AverageHasher {
+            ..Default::default()
+        };
+
+        // Act
+        let hash = hasher.hash_from_path(Path::new(TXT_FILE));
 
         // Assert
         match hash {

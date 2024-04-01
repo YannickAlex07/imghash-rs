@@ -5,11 +5,6 @@ else
 	OPEN := xdg-open
 endif
 
-
-.PHONY: init
-init:
-	cargo install
-
 .PHONY: test
 test:
 	cargo test --all-features --verbose

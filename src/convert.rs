@@ -1,6 +1,16 @@
 use image::{imageops::FilterType, DynamicImage};
 
 pub trait Convert {
+    /// Converts a given [`DynamicImage`] by conveting it to grayscale and then resizing it
+    /// to the specified size.
+    ///
+    /// # Arguments
+    /// * `img`: A reference to the image to convert
+    /// * `width`: The final width of the rescaled image
+    /// * `height`: The final height of the rescaled image
+    ///
+    /// # Returns
+    /// * The converted dynamic image
     fn convert(&self, img: &DynamicImage, width: u32, height: u32) -> DynamicImage {
         let filter = FilterType::Lanczos3;
         img.grayscale().resize_exact(width, height, filter)

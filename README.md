@@ -1,15 +1,21 @@
-# Simple Image Hashing in Rust
+# `imghash` - Image Hashing for Rust
 
-`imghash` is a crate that allows you do hash images in an easy and straightforward way.
+- [`imghash` - Image Hashing for Rust](#imghash---image-hashing-for-rust)
+  - [Usage](#usage)
+  - [Why another one?](#why-another-one)
 
-The following hashes are supported:
+`imghash` is a crate that allows you to generate different hashes for images. The following hashes can be
+generated using this crate:
 
-* Average Hash
-* Difference Hash
-* Perceptual Hash
-
-The links will take you to more detailed explainations found in the `/docs`-folder.
+* [Average Hash](./docs/average.md)
+* [Difference Hash](./docs/difference.md)
+* [Perceptual Hash](./docs/perceptual.md)
 
 ## Usage
+
+...
+
+
+## Why another one?
 
 ...

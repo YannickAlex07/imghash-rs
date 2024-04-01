@@ -1,30 +1,26 @@
-use image::ImageError;
-
 use crate::{
     convert::Convert,
     math::{dct2_over_matrix, median, Axis},
     ImageHash, ImageHasher,
 };
-use std::path::Path;
 
 pub struct PerceptualHasher {
+    /// The target width of the matrix
     pub width: u32,
+
+    /// The target height of the matrix
     pub height: u32,
+
+    /// The factor for the DCT matrix. We will rescale the image to (width * height) * 4
+    /// before we calculate the DCT on it.
     pub factor: u32,
 }
 
 impl ImageHasher for PerceptualHasher {
-    fn hash_from_path(&self, path: &Path) -> Result<ImageHash, ImageError> {
-        match image::io::Reader::open(path)?.decode() {
-            Ok(img) => Ok(self.hash_from_img(&img)),
-            Err(e) => Err(e),
-        }
-    }
-
     fn hash_from_img(&self, img: &image::DynamicImage) -> ImageHash {
         let high_freq = self.convert(img, self.width * self.factor, self.height * self.factor);
 
-        // convert the higher frequency image to a matrix
+        // convert the higher frequency image to a matrix of f64
         let high_freq_bytes = high_freq.as_bytes().to_vec();
         let high_freq_matrix: Vec<Vec<f64>> = high_freq_bytes
             .chunks((self.width * self.factor) as usize)
@@ -37,7 +33,7 @@ impl ImageHasher for PerceptualHasher {
             Axis::Row,
         );
 
-        // now we rescale the dct matrix to the actual given width and height
+        // now we crop the dct matrix to the actual target width and height
         let scaled_matrix: Vec<Vec<f64>> = dct_matrix
             .iter()
             .take(self.height as usize)
@@ -74,11 +70,14 @@ impl Convert for PerceptualHasher {}
 
 #[cfg(test)]
 mod tests {
+    use std::path::Path;
+
     use image::io::Reader as ImageReader;
 
     use super::*;
 
     const TEST_IMG: &str = "./data/img/test.png";
+    const TXT_FILE: &str = "./data/misc/test.txt";
 
     #[test]
     fn test_perceptual_hash_from_img() {
@@ -96,7 +95,7 @@ mod tests {
         let hash = hasher.hash_from_img(&img);
 
         // Assert
-        assert_eq!(hash.python_safe_encode(), "157d1d1b193c7c1c")
+        assert_eq!(hash.encode(), "157d1d1b193c7c1c")
     }
 
     #[test]
@@ -111,7 +110,7 @@ mod tests {
 
         // Assert
         match hash {
-            Ok(hash) => assert_eq!(hash.python_safe_encode(), "157d1d1b193c7c1c"),
+            Ok(hash) => assert_eq!(hash.encode(), "157d1d1b193c7c1c"),
             Err(err) => panic!("could not read image: {:?}", err),
         }
     }
@@ -125,6 +124,23 @@ mod tests {
 
         // Act
         let hash = hasher.hash_from_path(Path::new("./does/not/exist.png"));
+
+        // Assert
+        match hash {
+            Ok(hash) => panic!("found hash for non-existing image: {:?}", hash),
+            Err(_) => (),
+        }
+    }
+
+    #[test]
+    fn test_perceptual_hash_from_txt_file() {
+        // Arrange
+        let hasher = PerceptualHasher {
+            ..Default::default()
+        };
+
+        // Act
+        let hash = hasher.hash_from_path(Path::new(TXT_FILE));
 
         // Assert
         match hash {
