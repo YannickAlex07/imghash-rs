@@ -1,0 +1,24 @@
+name: Other Issues
+description: Anything else that you would like to discuss
+title: "[Other]: "
+
+labels: ["type: unspecified"]
+
+assignees:
+  - yannickalex07
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for supporting this crate by creating a new issue!
+        This is an unspecified issue, so feel free to discuss anything you would like.
+        Just make sure you are thorough in your description.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What is on your mind?
+      description: Please describe what you would like to discuss.
+    validations:
+      required: true

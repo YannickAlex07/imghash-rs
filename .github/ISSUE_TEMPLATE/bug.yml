@@ -1,0 +1,45 @@
+name: Bug Report
+description: File a bug report
+title: "[Bug]: "
+
+labels: ["type: bug"]
+
+assignees:
+  - yannickalex07
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for supporting this crate by reporting a bug!
+        Please make sure that you check if any issue related to the issue already exists.
+
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: "Which version of the crate are you using?"
+      placeholder: "1.0.0"
+    validations:
+      required: true 
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Describe the Bug
+      description: What happened and what did you expect?
+    validations:
+      required: true
+
+  - type: dropdown
+    id: platform
+    validations:
+      required: true
+    attributes:
+      label: On which platform did you observe this bug?
+      multiple: true
+      options:
+        - MacOS
+        - Windows
+        - Linux
+        - Other

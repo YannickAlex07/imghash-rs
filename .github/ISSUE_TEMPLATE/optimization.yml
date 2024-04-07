@@ -1,0 +1,22 @@
+name: Optimization
+description: Point out something that should be optimized
+title: "[Optimization]: "
+
+labels: ["type: optimization"]
+
+assignees:
+  - yannickalex07
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for supporting this crate by pointing out an optimization!
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Describe the Optimization
+      description: Please describe what could be optimized and why. If possible, provide a solution.
+    validations:
+      required: true
