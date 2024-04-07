@@ -1,0 +1,22 @@
+name: Feature Request
+description: Request a new feature
+title: "[Feature]: "
+
+labels: ["type: feature"]
+
+assignees:
+  - yannickalex07
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for supporting this crate by requesting a new feature!
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Describe the Feature
+      description: Please describe the feature you would like to see implemented and why.
+    validations:
+      required: true
