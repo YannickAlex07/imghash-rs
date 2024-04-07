@@ -1,5 +1,7 @@
 # `imghash` - Image Hashing for Rust
 
+![Crates.io Version](https://img.shields.io/crates/v/imghash)
+
 - [`imghash` - Image Hashing for Rust](#imghash---image-hashing-for-rust)
   - [Usage](#usage)
     - [Quickstart](#quickstart)
