@@ -174,7 +174,7 @@ mod tests {
         let hash = perceptual_hash(path);
 
         // Assert
-        assert_eq!(hash.unwrap().encode(), "157d1d1b193c7c1c")
+        assert_eq!(hash.unwrap().encode(), "acdbe86135344e3a")
     }
 
     #[test]

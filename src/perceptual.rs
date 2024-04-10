@@ -95,7 +95,7 @@ mod tests {
         let hash = hasher.hash_from_img(&img);
 
         // Assert
-        assert_eq!(hash.encode(), "157d1d1b193c7c1c")
+        assert_eq!(hash.encode(), "acdbe86135344e3a")
     }
 
     #[test]
@@ -110,7 +110,7 @@ mod tests {
 
         // Assert
         match hash {
-            Ok(hash) => assert_eq!(hash.encode(), "157d1d1b193c7c1c"),
+            Ok(hash) => assert_eq!(hash.encode(), "acdbe86135344e3a"),
             Err(err) => panic!("could not read image: {:?}", err),
         }
     }

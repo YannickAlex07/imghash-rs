@@ -61,16 +61,7 @@ pub fn dct2_over_matrix(input: &Vec<Vec<f64>>, axis: Axis) -> Vec<Vec<f64>> {
 
     // transpose the matrix if we are computing the DCT over the columns
     if axis == Axis::Column {
-        let rows = matrix.len();
-        let cols = matrix[0].len();
-        let mut transposed = vec![vec![matrix[0][0].clone(); rows]; cols];
-        for r in 0..rows {
-            for c in 0..cols {
-                transposed[c][r] = matrix[r][c].clone();
-            }
-        }
-
-        matrix = transposed;
+        matrix = transpose(&input);
     }
 
     // iterate and compute dct
@@ -80,6 +71,10 @@ pub fn dct2_over_matrix(input: &Vec<Vec<f64>>, axis: Axis) -> Vec<Vec<f64>> {
         let dct = dct2(&input);
 
         dct_matrix.push(dct);
+    }
+
+    if axis == Axis::Column {
+        return transpose(&dct_matrix);
     }
 
     dct_matrix
@@ -107,6 +102,27 @@ pub fn median(input: &[f64]) -> Option<f64> {
     } else {
         Some(sorted[mid])
     }
+}
+
+/// Transposes a matrix represented as a vector of vectors.
+///
+/// # Arguments
+/// * `input`: A reference to a matrix of floats
+///
+/// # Returns
+/// * A matrix with the transposed values
+pub fn transpose(input: &Vec<Vec<f64>>) -> Vec<Vec<f64>> {
+    let rows = input.len();
+    let cols = input[0].len();
+
+    let mut transposed = vec![vec![0.; rows]; cols];
+    for r in 0..rows {
+        for c in 0..cols {
+            transposed[c][r] = input[r][c].clone();
+        }
+    }
+
+    transposed
 }
 
 #[cfg(test)]
@@ -148,7 +164,12 @@ mod tests {
     #[test]
     fn test_dct2_over_matrix_rows() {
         // Arrange
-        let input = vec![vec![1., 2.], vec![3., 4.]];
+        let input = vec![
+            vec![1., 2., 3., 4.],
+            vec![5., 6., 7., 8.],
+            vec![9., 10., 11., 12.],
+            vec![13., 14., 15., 16.],
+        ];
 
         // Act
         let result = dct2_over_matrix(&input, Axis::Row);
@@ -156,14 +177,44 @@ mod tests {
         // Assert
         assert_eq!(
             result,
-            vec![[6.0, -1.4142135623730947], [14.0, -1.414213562373094]]
+            vec![
+                vec![
+                    20.0,
+                    -6.308644059797899,
+                    -1.7763568394002505e-15,
+                    -0.44834152916796777
+                ],
+                vec![
+                    52.0,
+                    -6.308644059797897,
+                    -3.552713678800501e-15,
+                    -0.44834152916797
+                ],
+                vec![
+                    84.0,
+                    -6.308644059797897,
+                    -7.105427357601002e-15,
+                    -0.44834152916797265
+                ],
+                vec![
+                    116.0,
+                    -6.308644059797899,
+                    -3.552713678800501e-15,
+                    -0.4483415291679762
+                ],
+            ]
         );
     }
 
     #[test]
     fn test_dct2_over_matrix_column() {
         // Arrange
-        let input = vec![vec![1., 2.], vec![3., 4.]];
+        let input = vec![
+            vec![1., 2., 3., 4.],
+            vec![5., 6., 7., 8.],
+            vec![9., 10., 11., 12.],
+            vec![13., 14., 15., 16.],
+        ];
 
         // Act
         let result = dct2_over_matrix(&input, Axis::Column);
@@ -171,7 +222,27 @@ mod tests {
         // Assert
         assert_eq!(
             result,
-            vec![[8.0, -2.82842712474619], [12.0, -2.8284271247461894]]
+            vec![
+                vec![56., 64., 72., 80.,],
+                vec![
+                    -25.234576239191597,
+                    -25.234576239191597,
+                    -25.234576239191597,
+                    -25.234576239191597
+                ],
+                vec![
+                    -7.105427357601002e-15,
+                    -7.105427357601002e-15,
+                    -7.105427357601002e-15,
+                    -7.105427357601002e-15
+                ],
+                vec![
+                    -1.7933661166718693,
+                    -1.7933661166718693,
+                    -1.7933661166718693,
+                    -1.793366116671871
+                ]
+            ]
         );
     }
 
@@ -233,5 +304,20 @@ mod tests {
 
         // Assert
         assert_eq!(result, None);
+    }
+
+    #[test]
+    fn test_transpose() {
+        // Arrange
+        let input = vec![vec![1., 2., 3.], vec![4., 5., 6.], vec![7., 8., 9.]];
+
+        // Act
+        let result = transpose(&input);
+
+        // Assert
+        assert_eq!(
+            result,
+            vec![vec![1., 4., 7.], vec![2., 5., 8.], vec![3., 6., 9.]]
+        );
     }
 }
