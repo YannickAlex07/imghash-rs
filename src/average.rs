@@ -1,4 +1,4 @@
-use crate::{convert::Convert, ImageHash, ImageHasher};
+use crate::{convert::Convert, ColorSpace, ImageHash, ImageHasher};
 
 pub struct AverageHasher {
     /// The target width of the matrix
@@ -10,7 +10,7 @@ pub struct AverageHasher {
 
 impl ImageHasher for AverageHasher {
     fn hash_from_img(&self, img: &image::DynamicImage) -> ImageHash {
-        let converted = self.convert(img, self.width, self.height);
+        let converted = self.convert(img, self.width, self.height, ColorSpace::REC709);
         let mean: usize = converted
             .as_bytes()
             .to_vec()

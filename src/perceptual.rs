@@ -1,7 +1,7 @@
 use crate::{
     convert::Convert,
     math::{dct2_over_matrix, median, Axis},
-    ImageHash, ImageHasher,
+    ColorSpace, ImageHash, ImageHasher,
 };
 
 pub struct PerceptualHasher {
@@ -18,7 +18,12 @@ pub struct PerceptualHasher {
 
 impl ImageHasher for PerceptualHasher {
     fn hash_from_img(&self, img: &image::DynamicImage) -> ImageHash {
-        let high_freq = self.convert(img, self.width * self.factor, self.height * self.factor);
+        let high_freq = self.convert(
+            img,
+            self.width * self.factor,
+            self.height * self.factor,
+            ColorSpace::REC601,
+        );
 
         // convert the higher frequency image to a matrix of f64
         let high_freq_bytes = high_freq.as_bytes().to_vec();

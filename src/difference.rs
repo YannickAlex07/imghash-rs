@@ -1,4 +1,4 @@
-use crate::{convert::Convert, ImageHash, ImageHasher};
+use crate::{convert::Convert, ColorSpace, ImageHash, ImageHasher};
 
 pub struct DifferenceHasher {
     /// The target width of the matrix
@@ -10,7 +10,7 @@ pub struct DifferenceHasher {
 
 impl ImageHasher for DifferenceHasher {
     fn hash_from_img(&self, img: &image::DynamicImage) -> ImageHash {
-        let converted = self.convert(img, self.width + 1, self.height);
+        let converted = self.convert(img, self.width + 1, self.height, ColorSpace::REC601);
 
         // we will compute the differences on this matrix
         let compare_matrix: Vec<Vec<u8>> = converted

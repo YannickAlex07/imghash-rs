@@ -102,6 +102,7 @@ mod imghash;
 mod math;
 
 // public exports
+pub use crate::convert::ColorSpace;
 pub use crate::imghash::ImageHash;
 
 #[cfg(test)]
