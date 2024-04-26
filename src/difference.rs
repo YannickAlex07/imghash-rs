@@ -1,4 +1,4 @@
-use crate::{convert::Convert, ColorSpace, ImageHash, ImageHasher};
+use crate::{imageops::ImageOps, ColorSpace, ImageHash, ImageHasher};
 
 pub struct DifferenceHasher {
     /// The target width of the matrix
@@ -6,11 +6,13 @@ pub struct DifferenceHasher {
 
     /// The target height of the matrix
     pub height: u32,
+
+    pub color_space: ColorSpace,
 }
 
 impl ImageHasher for DifferenceHasher {
     fn hash_from_img(&self, img: &image::DynamicImage) -> ImageHash {
-        let converted = self.convert(img, self.width + 1, self.height, ColorSpace::REC601);
+        let converted = self.convert(img, self.width + 1, self.height, &self.color_space);
 
         // we will compute the differences on this matrix
         let compare_matrix: Vec<Vec<u8>> = converted
@@ -36,11 +38,12 @@ impl Default for DifferenceHasher {
         DifferenceHasher {
             width: 8,
             height: 8,
+            color_space: ColorSpace::REC601,
         }
     }
 }
 
-impl Convert for DifferenceHasher {}
+impl ImageOps for DifferenceHasher {}
 
 #[cfg(test)]
 mod tests {
@@ -52,6 +55,9 @@ mod tests {
 
     const TEST_IMG: &str = "./data/img/test.png";
     const TXT_FILE: &str = "./data/misc/test.txt";
+
+    const REC_601_HASH: &str = "cc99717ed9ea0627";
+    const REC_709_HASH: &str = "c499717ed9ea0627";
 
     #[test]
     fn test_difference_hash_from_img() {
@@ -69,7 +75,27 @@ mod tests {
         let hash = hasher.hash_from_img(&img);
 
         // Assert
-        assert_eq!(hash.encode(), "c49b397ed9ea0627")
+        assert_eq!(hash.encode(), REC_601_HASH)
+    }
+
+    #[test]
+    fn test_difference_hash_from_img_with_rec709() {
+        // Arrange
+        let img = ImageReader::open(Path::new(TEST_IMG))
+            .unwrap()
+            .decode()
+            .unwrap();
+
+        let hasher = DifferenceHasher {
+            color_space: ColorSpace::REC709,
+            ..Default::default()
+        };
+
+        // Act
+        let hash = hasher.hash_from_img(&img);
+
+        // Assert
+        assert_eq!(hash.encode(), REC_709_HASH)
     }
 
     #[test]
@@ -84,7 +110,7 @@ mod tests {
 
         // Assert
         match hash {
-            Ok(hash) => assert_eq!(hash.encode(), "c49b397ed9ea0627"),
+            Ok(hash) => assert_eq!(hash.encode(), REC_601_HASH),
             Err(err) => panic!("could not read image: {:?}", err),
         }
     }

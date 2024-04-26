@@ -6,11 +6,19 @@ pub enum ColorSpace {
     REC601,
 }
 
-pub trait Convert {
-    fn grayscale(&self, img: &DynamicImage, space: ColorSpace) -> DynamicImage {
+pub trait ImageOps {
+    /// Converts a given [`DynamicImage`] to grayscale using the specified [`ColorSpace`].
+    ///
+    /// # Arguments
+    /// * `img`: A reference to the image to convert
+    /// * `space`: The color space to use for the conversion
+    ///
+    /// # Returns
+    /// * The converted dynamic image
+    fn grayscale(&self, img: &DynamicImage, space: &ColorSpace) -> DynamicImage {
         let mut buffer = GrayImage::new(img.width(), img.height());
 
-        let coefficients: [f32; 3];
+        let coefficients: [f64; 3];
         match space {
             ColorSpace::REC709 => coefficients = [0.2126, 0.7152, 0.0722],
             ColorSpace::REC601 => coefficients = [0.299, 0.587, 0.114],
@@ -19,11 +27,12 @@ pub trait Convert {
         buffer.par_enumerate_pixels_mut().for_each(|(x, y, pixel)| {
             let [r, g, b, _] = img.get_pixel(x, y).0;
 
-            let luma = (coefficients[0] * r as f32
-                + coefficients[1] * g as f32
-                + coefficients[2] * b as f32) as u8;
+            let luma = (coefficients[0] * r as f64
+                + coefficients[1] * g as f64
+                + coefficients[2] * b as f64)
+                .round();
 
-            *pixel = image::Luma([luma]);
+            *pixel = image::Luma([luma as u8]);
         });
 
         DynamicImage::ImageLuma8(buffer)
@@ -44,7 +53,7 @@ pub trait Convert {
         img: &DynamicImage,
         width: u32,
         height: u32,
-        color_space: ColorSpace,
+        color_space: &ColorSpace,
     ) -> DynamicImage {
         let filter = FilterType::Lanczos3;
 
@@ -61,7 +70,7 @@ mod tests {
     use std::path::Path;
 
     pub struct Converter;
-    impl Convert for Converter {}
+    impl ImageOps for Converter {}
 
     const TEST_IMG: &str = "./data/img/test.png";
 
@@ -87,10 +96,32 @@ mod tests {
         let converter = Converter {};
 
         // Act
-        let grayscale = converter.grayscale(&test_img, ColorSpace::REC601);
+        let grayscale = converter.grayscale(&test_img, &ColorSpace::REC601);
 
         // Assert
         assert_eq!(grayscale, grayscale_img);
+    }
+
+    #[test]
+    fn test_convert_with_rec_601() {
+        // Arrange
+        let test_img = ImageReader::open(Path::new(TEST_IMG))
+            .unwrap()
+            .decode()
+            .unwrap();
+
+        let converted_img = ImageReader::open(Path::new(REC_601_SCALED_IMG))
+            .unwrap()
+            .decode()
+            .unwrap();
+
+        let converter = Converter {};
+
+        // Act
+        let converted = converter.convert(&test_img, 32, 32, &ColorSpace::REC601);
+
+        // Assert
+        assert_eq!(converted, converted_img);
     }
 
     #[test]
@@ -109,7 +140,7 @@ mod tests {
         let converter = Converter {};
 
         // Act
-        let grayscale = converter.grayscale(&test_img, ColorSpace::REC709);
+        let grayscale = converter.grayscale(&test_img, &ColorSpace::REC709);
 
         // Assert
         assert_eq!(grayscale, grayscale_img);
@@ -131,29 +162,7 @@ mod tests {
         let converter = Converter {};
 
         // Act
-        let converted = converter.convert(&test_img, 32, 32, ColorSpace::REC709);
-
-        // Assert
-        assert_eq!(converted, converted_img);
-    }
-
-    #[test]
-    fn test_convert_with_rec_601() {
-        // Arrange
-        let test_img = ImageReader::open(Path::new(TEST_IMG))
-            .unwrap()
-            .decode()
-            .unwrap();
-
-        let converted_img = ImageReader::open(Path::new(REC_601_SCALED_IMG))
-            .unwrap()
-            .decode()
-            .unwrap();
-
-        let converter = Converter {};
-
-        // Act
-        let converted = converter.convert(&test_img, 32, 32, ColorSpace::REC601);
+        let converted = converter.convert(&test_img, 32, 32, &ColorSpace::REC709);
 
         // Assert
         assert_eq!(converted, converted_img);

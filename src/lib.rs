@@ -97,12 +97,12 @@ pub mod difference;
 pub mod perceptual;
 
 // private modules
-mod convert;
+mod imageops;
 mod imghash;
 mod math;
 
 // public exports
-pub use crate::convert::ColorSpace;
+pub use crate::imageops::ColorSpace;
 pub use crate::imghash::ImageHash;
 
 #[cfg(test)]
