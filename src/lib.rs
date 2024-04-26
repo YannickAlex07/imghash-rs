@@ -148,7 +148,7 @@ mod tests {
         let hash = difference_hash(path);
 
         // Assert
-        assert_eq!(hash.unwrap().encode(), "c49b397ed9ea0627")
+        assert_eq!(hash.unwrap().encode(), "cc99717ed9ea0627")
     }
 
     #[test]

@@ -1,6 +1,7 @@
 # `imghash` - Image Hashing for Rust
 
 ![Crates.io Version](https://img.shields.io/crates/v/imghash)
+[![Main](https://github.com/YannickAlex07/imghash-rs/actions/workflows/main.yaml/badge.svg)](https://github.com/YannickAlex07/imghash-rs/actions/workflows/main.yaml)
 
 - [`imghash` - Image Hashing for Rust](#imghash---image-hashing-for-rust)
   - [Usage](#usage)
