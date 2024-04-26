@@ -1,7 +1,7 @@
 use crate::{
-    convert::Convert,
+    imageops::ImageOps,
     math::{dct2_over_matrix, median, Axis},
-    ImageHash, ImageHasher,
+    ColorSpace, ImageHash, ImageHasher,
 };
 
 pub struct PerceptualHasher {
@@ -14,11 +14,18 @@ pub struct PerceptualHasher {
     /// The factor for the DCT matrix. We will rescale the image to (width * height) * 4
     /// before we calculate the DCT on it.
     pub factor: u32,
+
+    pub color_space: ColorSpace,
 }
 
 impl ImageHasher for PerceptualHasher {
     fn hash_from_img(&self, img: &image::DynamicImage) -> ImageHash {
-        let high_freq = self.convert(img, self.width * self.factor, self.height * self.factor);
+        let high_freq = self.convert(
+            img,
+            self.width * self.factor,
+            self.height * self.factor,
+            &self.color_space,
+        );
 
         // convert the higher frequency image to a matrix of f64
         let high_freq_bytes = high_freq.as_bytes().to_vec();
@@ -62,11 +69,12 @@ impl Default for PerceptualHasher {
             width: 8,
             height: 8,
             factor: 4,
+            color_space: ColorSpace::REC601,
         }
     }
 }
 
-impl Convert for PerceptualHasher {}
+impl ImageOps for PerceptualHasher {}
 
 #[cfg(test)]
 mod tests {
@@ -78,6 +86,9 @@ mod tests {
 
     const TEST_IMG: &str = "./data/img/test.png";
     const TXT_FILE: &str = "./data/misc/test.txt";
+
+    const REC_601_HASH: &str = "acdbe86135344e3a";
+    const REC_709_HASH: &str = "acdbe86135344e3a";
 
     #[test]
     fn test_perceptual_hash_from_img() {
@@ -95,7 +106,27 @@ mod tests {
         let hash = hasher.hash_from_img(&img);
 
         // Assert
-        assert_eq!(hash.encode(), "acdbe86135344e3a")
+        assert_eq!(hash.encode(), REC_601_HASH)
+    }
+
+    #[test]
+    fn test_perceptual_hash_from_img_with_rec_709() {
+        // Arrange
+        let img = ImageReader::open(Path::new(TEST_IMG))
+            .unwrap()
+            .decode()
+            .unwrap();
+
+        let hasher = PerceptualHasher {
+            color_space: ColorSpace::REC709,
+            ..Default::default()
+        };
+
+        // Act
+        let hash = hasher.hash_from_img(&img);
+
+        // Assert
+        assert_eq!(hash.encode(), REC_709_HASH)
     }
 
     #[test]
@@ -110,7 +141,7 @@ mod tests {
 
         // Assert
         match hash {
-            Ok(hash) => assert_eq!(hash.encode(), "acdbe86135344e3a"),
+            Ok(hash) => assert_eq!(hash.encode(), REC_601_HASH),
             Err(err) => panic!("could not read image: {:?}", err),
         }
     }

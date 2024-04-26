@@ -97,11 +97,12 @@ pub mod difference;
 pub mod perceptual;
 
 // private modules
-mod convert;
+mod imageops;
 mod imghash;
 mod math;
 
 // public exports
+pub use crate::imageops::ColorSpace;
 pub use crate::imghash::ImageHash;
 
 #[cfg(test)]
@@ -147,7 +148,7 @@ mod tests {
         let hash = difference_hash(path);
 
         // Assert
-        assert_eq!(hash.unwrap().encode(), "c49b397ed9ea0627")
+        assert_eq!(hash.unwrap().encode(), "cc99717ed9ea0627")
     }
 
     #[test]
