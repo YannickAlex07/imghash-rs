@@ -4,7 +4,7 @@ on: [pull_request]
 
 jobs:
   test:
-    name: Run Test
+    name: Tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -18,7 +18,7 @@ jobs:
         run: make test
 
   format:
-    name: Check Formatting
+    name: Formatting
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -33,7 +33,7 @@ jobs:
         run: make check-fmt
 
   lint:
-    name: Lint
+    name: Linting
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -47,7 +47,7 @@ jobs:
         run: make lint
 
   coverage:
-    name: Generate Coverage
+    name: Coverage
     permissions:
       contents: write
       pull-requests: write
