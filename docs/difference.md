@@ -17,11 +17,12 @@ Like each other hashing algorithm, the difference hash algorithm has some pros a
 
 #### Pros
 
-* Simple and quick to calculate
+* Still fairly cheap to compute
+* Resiliant to some color changes in the image
 
 #### Cons
 
-* ...
+* Might still fail for some color changes and edge cases
 
 
 ## Algorithm

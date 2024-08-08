@@ -29,7 +29,7 @@ impl ImageHasher for DifferenceHasher {
             matrix.push(r);
         }
 
-        ImageHash { matrix }
+        ImageHash::new(matrix)
     }
 }
 

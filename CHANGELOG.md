@@ -1,3 +1,9 @@
+# Version 1.3.0
+
+- Added a new `distance`-method to compute the hamming distance between hashes
+- Added a new `shape`-method to get the shape of an underlying bit matrix for a hash
+- Made the bit matrix private and added a new `new`-function to create hashes
+
 # Version 1.2.0
 
 - Introduction of custom grayscaling algorithms. The crate now supports grayscaling using the REC709 or REC601 (new default) color space. This will actually now align the hashes with Python packages like `imagehash` that use Pillow under the hood. However, this will also cause some hashes to be different from previous versions.

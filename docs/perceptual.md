@@ -1,6 +1,6 @@
-# Difference Hash
+# Perceptual Hash
 
-- [Difference Hash](#difference-hash)
+- [Perceptual Hash](#perceptual-hash)
   - [Pros \& Cons](#pros--cons)
       - [Pros](#pros)
       - [Cons](#cons)
@@ -19,11 +19,11 @@ Like each other hashing algorithm, the perceptual hash algorithm has some pros a
 
 #### Pros
 
-* Simple and quick to calculate
+* Will be very resilities to various color changes that other hashes might fail to detect
 
 #### Cons
 
-* ...
+* More expense to compute
 
 
 ## Algorithm

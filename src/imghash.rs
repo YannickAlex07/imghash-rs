@@ -1,12 +1,46 @@
 #[derive(Debug, PartialEq)]
 pub struct ImageHash {
-    pub matrix: Vec<Vec<bool>>,
+    matrix: Vec<Vec<bool>>,
 }
 
 impl ImageHash {
+    /// Create a new ImageHash from the specificed bit matrix.
+    pub fn new(matrix: Vec<Vec<bool>>) -> ImageHash {
+        // Ensures that the matrix rows all have the same length.
+        // If not, this is a critical issue and likely a bug in the code
+        // that creates the hash -> therefore a panic here is appropriate
+        let first_length = matrix.first().unwrap().len();
+        matrix.iter().for_each(|row| {
+            if row.len() != first_length {
+                panic!("All rows must have the same length");
+            }
+        });
+
+        ImageHash { matrix }
+    }
+
     /// Flattens the bit matrix that represents the [`ImageHash`] into a single vector.
     pub fn flatten(&self) -> Vec<bool> {
         self.matrix.iter().flatten().copied().collect()
+    }
+
+    /// The shape of the matrix that represents the [`ImageHash`]
+    pub fn shape(&self) -> (usize, usize) {
+        (self.matrix.len(), self.matrix.first().unwrap().len())
+    }
+
+    /// The hamming distance between this hash and the other hash. The hamming distance is the
+    /// number of bits that differ between the two hashes.
+    pub fn distance(&self, other: &ImageHash) -> Result<usize, String> {
+        if self.shape() != other.shape() {
+            return Err("Cannot subtract hashes of different sizes".to_string());
+        }
+
+        Ok(self
+            .flatten()
+            .iter()
+            .zip(other.flatten().iter())
+            .fold(0, |acc, (a, b)| acc + (a != b) as usize))
     }
 
     /// Encodes the bit matrix that represents the [`ImageHash`] into a hexadecimal string.
@@ -132,7 +166,31 @@ impl ImageHash {
 
 #[cfg(test)]
 mod tests {
+
     use super::*;
+
+    // NEW
+
+    #[test]
+    fn test_image_new_with_valid_matrix() {
+        // Arrange
+        let hash = ImageHash::new(vec![vec![false, true], vec![true, false]]);
+
+        // Assert
+        assert_eq!(
+            hash,
+            ImageHash {
+                matrix: vec![vec![false, true], vec![true, false]],
+            }
+        );
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_image_new_with_invalid_matrix() {
+        // should panic as the second row is longer than the first one
+        let _ = ImageHash::new(vec![vec![false, true], vec![true, false, false]]);
+    }
 
     // FLATTEN
 
@@ -152,7 +210,25 @@ mod tests {
         assert_eq!(flattened, expected);
     }
 
-    // PYTHON SAFE ENCODING
+    // SHAPE
+
+    #[test]
+    fn test_image_hash_shape() {
+        // Arrange
+        let hash = ImageHash {
+            matrix: vec![vec![false, true], vec![true, false]],
+        };
+
+        let expected = (2, 2);
+
+        // Act
+        let flattened = hash.shape();
+
+        // Assert
+        assert_eq!(flattened, expected);
+    }
+
+    // ENCODING
 
     #[test]
     fn test_image_hash_encoding() {
@@ -237,7 +313,7 @@ mod tests {
         assert_eq!(hash.encode(), "1");
     }
 
-    // PYTHON SAFE DECODING
+    // DECODING
 
     #[test]
     fn test_image_hash_decoding() {
@@ -358,6 +434,71 @@ mod tests {
         match decoded {
             Ok(_) => panic!("Should not have decoded"),
             Err(e) => assert_eq!(e, "String is empty"),
+        }
+    }
+
+    // DISTANCE
+
+    #[test]
+    fn test_image_hash_distance_with_unequal_hashes() {
+        // Arrange
+        let hash1 = ImageHash {
+            matrix: vec![vec![false, true], vec![true, false]],
+        };
+
+        let hash2 = ImageHash {
+            matrix: vec![vec![true, true], vec![false, false]],
+        };
+
+        // Act
+        let distance = hash1.distance(&hash2);
+
+        // Assert
+        match distance {
+            Ok(d) => assert_eq!(d, 2),
+            Err(_) => panic!("Should not have errored"),
+        }
+    }
+
+    #[test]
+    fn test_image_hash_distance_with_equal_hashes() {
+        // Arrange
+        let hash1 = ImageHash {
+            matrix: vec![vec![false, true], vec![true, false]],
+        };
+
+        let hash2 = ImageHash {
+            matrix: vec![vec![false, true], vec![true, false]],
+        };
+
+        // Act
+        let distance = hash1.distance(&hash2);
+
+        // Assert
+        match distance {
+            Ok(d) => assert_eq!(d, 0),
+            Err(_) => panic!("Should not have errored"),
+        }
+    }
+
+    #[test]
+    fn test_image_hash_distance_with_different_sizes() {
+        // Arrange
+        let hash1 = ImageHash {
+            matrix: vec![vec![false, true, false], vec![true, false, false]],
+        };
+
+        let hash2 = ImageHash {
+            matrix: vec![vec![false, true], vec![true, false]],
+        };
+
+        // Act
+        let distance = hash1.distance(&hash2);
+
+        // Assert
+        match distance {
+            Ok(_) => panic!("Should not have succeeded"),
+            Err(e) => assert_eq!(e, "Cannot subtract hashes of different sizes"),
         }
     }
 }
