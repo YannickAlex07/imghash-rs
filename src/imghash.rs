@@ -29,7 +29,8 @@ impl ImageHash {
         (self.matrix.len(), self.matrix.first().unwrap().len())
     }
 
-    ///
+    /// The hamming distance between this hash and the other hash. The hamming distance is the
+    /// number of bits that differ between the two hashes.
     pub fn distance(&self, other: &ImageHash) -> Result<usize, String> {
         if self.shape() != other.shape() {
             return Err("Cannot subtract hashes of different sizes".to_string());
@@ -436,10 +437,10 @@ mod tests {
         }
     }
 
-    // DIFFERENCE
+    // DISTANCE
 
     #[test]
-    fn test_image_hash_difference_with_unequal_hashes() {
+    fn test_image_hash_distance_with_unequal_hashes() {
         // Arrange
         let hash1 = ImageHash {
             matrix: vec![vec![false, true], vec![true, false]],
@@ -460,7 +461,7 @@ mod tests {
     }
 
     #[test]
-    fn test_image_hash_difference_with_equal_hashes() {
+    fn test_image_hash_distance_with_equal_hashes() {
         // Arrange
         let hash1 = ImageHash {
             matrix: vec![vec![false, true], vec![true, false]],
@@ -481,7 +482,7 @@ mod tests {
     }
 
     #[test]
-    fn test_image_hash_difference_with_different_sizes() {
+    fn test_image_hash_distance_with_different_sizes() {
         // Arrange
         let hash1 = ImageHash {
             matrix: vec![vec![false, true, false], vec![true, false, false]],
