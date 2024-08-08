@@ -59,7 +59,7 @@ impl ImageHasher for PerceptualHasher {
             }
         }
 
-        ImageHash { matrix: bits }
+        ImageHash::new(bits)
     }
 }
 

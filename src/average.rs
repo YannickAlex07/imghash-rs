@@ -34,7 +34,7 @@ impl ImageHasher for AverageHasher {
             .map(|x| x.to_vec())
             .collect();
 
-        ImageHash { matrix }
+        ImageHash::new(matrix)
     }
 }
 
