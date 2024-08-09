@@ -37,7 +37,7 @@ let difference = difference_hash(path);
 let perceptual = perceptual_hash(path);
 ```
 
-Each of these functions return a `Result<ImageHash, String>`-type. The `ImageHash` object is essentially a container for the encoded bit matrix of the image (learn more [here](./docs/encoding.md)). The `ImageHash` can be encoded into hexadecimal string by calling the encode method:
+Each of these functions return a `Result<ImageHash, String>`-type. The `ImageHash` object is essentially a container for the encoded bit matrix of the image (learn more [here](./docs/encoding.md)). The `ImageHash` can be encoded into hexadecimal string by calling the `encode`-method:
 
 ```rust
 let res: String = hash.encode();
@@ -71,9 +71,9 @@ This can produce an error if the hashes are not of the same size.
 
 ### Custom Hashers
 
-If you need more flexibility, for example getting a larger bit matrix, you can use a custom Hasher instance.
+If you need more flexibility, for example computing a larger bit matrix than the default, you can use a custom `Hasher`.
 
-For each hash type the crate provides a custom hasher, here for the example we will use the `AverageHasher`:
+For each hash type the crate provides a custom hasher, for the example here we will use the `AverageHasher`:
 
 ```rust
 use imghash::{average::AverageHasher};
@@ -88,7 +88,7 @@ let hasher = AverageHasher {
 let hash = hasher.hash_from_path(path);
 ```
 
-Hasher instances also allow you to create hashes for already loaded images:
+`Hasher`-instances also allow you to create hashes for already loaded images:
 
 ```rust
 let img = ImageReader::open(...);
