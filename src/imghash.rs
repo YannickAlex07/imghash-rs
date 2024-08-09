@@ -19,6 +19,11 @@ impl ImageHash {
         ImageHash { matrix }
     }
 
+    /// Returns a copy of the underlying matrix that represents the [`ImageHash`].
+    pub fn matrix(&self) -> Vec<Vec<bool>> {
+        self.matrix.clone()
+    }
+
     /// Flattens the bit matrix that represents the [`ImageHash`] into a single vector.
     pub fn flatten(&self) -> Vec<bool> {
         self.matrix.iter().flatten().copied().collect()
@@ -33,7 +38,7 @@ impl ImageHash {
     /// number of bits that differ between the two hashes.
     pub fn distance(&self, other: &ImageHash) -> Result<usize, String> {
         if self.shape() != other.shape() {
-            return Err("Cannot subtract hashes of different sizes".to_string());
+            return Err("Cannot compute distance of hashes with different sizes".to_string());
         }
 
         Ok(self
@@ -172,7 +177,7 @@ mod tests {
     // NEW
 
     #[test]
-    fn test_image_new_with_valid_matrix() {
+    fn test_image_hash_new_with_valid_matrix() {
         // Arrange
         let hash = ImageHash::new(vec![vec![false, true], vec![true, false]]);
 
@@ -187,9 +192,20 @@ mod tests {
 
     #[test]
     #[should_panic]
-    fn test_image_new_with_invalid_matrix() {
+    fn test_image_hash_new_with_invalid_matrix() {
         // should panic as the second row is longer than the first one
         let _ = ImageHash::new(vec![vec![false, true], vec![true, false, false]]);
+    }
+
+    // MATRIX
+
+    #[test]
+    fn test_image_hash_get_matrix() {
+        // Arrange
+        let hash = ImageHash::new(vec![vec![false, true], vec![true, false]]);
+
+        // Assert
+        assert_eq!(hash.matrix(), vec![vec![false, true], vec![true, false]],);
     }
 
     // FLATTEN
@@ -498,7 +514,7 @@ mod tests {
         // Assert
         match distance {
             Ok(_) => panic!("Should not have succeeded"),
-            Err(e) => assert_eq!(e, "Cannot subtract hashes of different sizes"),
+            Err(e) => assert_eq!(e, "Cannot compute distance of hashes with different sizes"),
         }
     }
 }
