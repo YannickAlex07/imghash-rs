@@ -14,5 +14,5 @@ repository = "https://github.com/YannickAlex07/imghash-rs"
 edition = "2021"
 
 [dependencies]
-image = { version = "0.24.8", features = ["rayon"] }
+image = { version = "0.25.6", features = ["rayon"] }
 rayon = "1.10.0"
