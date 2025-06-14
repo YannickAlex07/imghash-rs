@@ -1,3 +1,7 @@
+# Version 1.4.0
+
+- Updated the internal image crate to version 0.25.6
+
 # Version 1.3.1
 
 - Added a new `matrix()`-method that allows access to a copy of the underlying bit matrix
