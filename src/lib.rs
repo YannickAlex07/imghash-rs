@@ -16,7 +16,7 @@ pub trait ImageHasher {
     ///
     /// The generated image hash.
     fn hash_from_path(&self, path: &Path) -> Result<ImageHash, ImageError> {
-        match image::io::Reader::open(path)?.decode() {
+        match image::ImageReader::open(path)?.decode() {
             Ok(img) => Ok(self.hash_from_img(&img)),
             Err(e) => Err(e),
         }

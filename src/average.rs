@@ -54,7 +54,7 @@ impl ImageOps for AverageHasher {}
 mod tests {
     use std::path::Path;
 
-    use image::io::Reader as ImageReader;
+    use image::ImageReader;
 
     use super::*;
 

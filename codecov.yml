@@ -1,0 +1,8 @@
+coverage:
+  status:
+    project:
+      default:
+        threshold: "2"
+
+comment:
+  layout: "header, files, condensed_footer"

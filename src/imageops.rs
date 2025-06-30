@@ -66,7 +66,7 @@ pub trait ImageOps {
 mod tests {
     use super::*;
 
-    use image::io::Reader as ImageReader;
+    use image::ImageReader;
     use std::path::Path;
 
     pub struct Converter;
