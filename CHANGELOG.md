@@ -1,3 +1,7 @@
+# Version 1.5.0
+
+- Updated depracted `image::io::ImageReader` imports
+
 # Version 1.4.0
 
 - Updated the internal image crate to version 0.25.6
