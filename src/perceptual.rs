@@ -80,7 +80,7 @@ impl ImageOps for PerceptualHasher {}
 mod tests {
     use std::path::Path;
 
-    use image::io::Reader as ImageReader;
+    use image::ImageReader;
 
     use super::*;
 
