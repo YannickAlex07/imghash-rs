@@ -1,6 +1,8 @@
 # Version 1.5.0
 
-- Updated depracted `image::io::ImageReader` imports
+- Updated deprecated `image::io::ImageReader` imports
+- Deprecated `ImageHash::new`
+- The `ImageHash` type is now backed by a bit vector instead of a `bool` matrix. The `matrix()` method now creates a new `Vec<Vec<bool>>` from the bit vector, which is very inefficient.
 
 # Version 1.4.0
 
@@ -32,4 +34,4 @@
 
 - Added hashers for Average, Difference and Perceptual hashes
 - Added utility functions for the hashers
-- Added ImageHash object for encoding and decoding bit matricies
+- Added ImageHash object for encoding and decoding bit matrices

@@ -1,4 +1,5 @@
 use crate::{imageops::ImageOps, ColorSpace, ImageHash, ImageHasher};
+use bitvec::prelude::*;
 
 pub struct AverageHasher {
     /// The target width of the matrix
@@ -20,21 +21,21 @@ impl ImageHasher for AverageHasher {
             .to_vec()
             .iter()
             .fold(0, |acc, x| acc + *x as usize)
-            / (self.width * self.height) as usize;
+            / (self.width as usize * self.height as usize);
 
-        let mut bits = vec![false; (self.width * self.height) as usize];
+        let size = (self.width as usize * self.height as usize + 7) / 8;
+        let padding = size * 8 - (self.width as usize * self.height as usize);
+
+        let mut bits = vec![0_u8; size];
+        let data = bits.view_bits_mut::<Msb0>();
+
         for (i, p) in converted.as_bytes().to_vec().iter().enumerate() {
             if *p as usize > mean {
-                bits[i] = true;
+                data.set(i + padding, true);
             }
         }
 
-        let matrix = bits
-            .chunks(self.width as usize)
-            .map(|x| x.to_vec())
-            .collect();
-
-        ImageHash::new(matrix)
+        ImageHash::new_from_bit_vector(bits, self.width, self.height)
     }
 }
 

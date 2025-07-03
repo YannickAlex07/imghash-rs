@@ -15,4 +15,5 @@ edition = "2021"
 
 [dependencies]
 image = { version = "0.25.6", features = ["rayon"] }
+bitvec = "1.0.0"
 rayon = "1.10.0"

@@ -1,4 +1,5 @@
 use crate::{imageops::ImageOps, ColorSpace, ImageHash, ImageHasher};
+use bitvec::prelude::*;
 
 pub struct DifferenceHasher {
     /// The target width of the matrix
@@ -15,21 +16,31 @@ impl ImageHasher for DifferenceHasher {
         let converted = self.convert(img, self.width + 1, self.height, &self.color_space);
 
         // we will compute the differences on this matrix
-        let compare_matrix: Vec<Vec<u8>> = converted
+        let compare_matrix: Box<[Box<[u8]>]> = converted
             .as_bytes()
             .to_vec()
             .chunks((self.width + 1) as usize)
-            .map(|x| x.to_vec())
-            .collect();
+            .map(|x| x.to_vec().into_boxed_slice())
+            .collect::<Vec<_>>()
+            .into_boxed_slice();
 
-        // the results are stored in this matrix
-        let mut matrix: Vec<Vec<bool>> = vec![];
+        let size = (self.width as usize * self.height as usize + 7) / 8;
+
+        let mut bits = vec![0_u8; size];
+        let data = bits.view_bits_mut::<Msb0>();
+
+        let mut x = size * 8 - (self.width as usize * self.height as usize);
+
         for row in &compare_matrix {
-            let r: Vec<bool> = row.windows(2).map(|window| window[0] < window[1]).collect();
-            matrix.push(r);
+            row.windows(2)
+                .map(|window| window[0] < window[1])
+                .for_each(|v| {
+                    data.set(x, v);
+                    x += 1;
+                });
         }
 
-        ImageHash::new(matrix)
+        ImageHash::new_from_bit_vector(bits, self.width, self.height)
     }
 }
 

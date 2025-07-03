@@ -3,6 +3,7 @@ use crate::{
     math::{dct2_over_matrix, median, Axis},
     ColorSpace, ImageHash, ImageHasher,
 };
+use bitvec::prelude::*;
 
 pub struct PerceptualHasher {
     /// The target width of the matrix
@@ -30,7 +31,7 @@ impl ImageHasher for PerceptualHasher {
         // convert the higher frequency image to a matrix of f64
         let high_freq_bytes = high_freq.as_bytes().to_vec();
         let high_freq_matrix: Vec<Vec<f64>> = high_freq_bytes
-            .chunks((self.width * self.factor) as usize)
+            .chunks(self.width as usize * self.factor as usize)
             .map(|x| x.iter().map(|x| *x as f64).collect::<Vec<f64>>())
             .collect();
 
@@ -52,14 +53,19 @@ impl ImageHasher for PerceptualHasher {
         let median = median(&flattened).unwrap();
 
         // compare each pixel of our scaled image to the mean
-        let mut bits = vec![vec![false; self.width as usize]; self.height as usize];
+        let size = (self.width as usize * self.height as usize + 7) / 8;
+        let padding = size * 8 - (self.width as usize * self.height as usize);
+
+        let mut bits = vec![0_u8; size];
+        let data = bits.view_bits_mut::<Msb0>();
+
         for (i, row) in scaled_matrix.iter().enumerate() {
             for (j, pixel) in row.iter().enumerate() {
-                bits[i][j] = *pixel > median;
+                data.set(i * self.width as usize + j + padding, *pixel > median);
             }
         }
 
-        ImageHash::new(bits)
+        ImageHash::new_from_bit_vector(bits, self.width, self.height)
     }
 }
 
