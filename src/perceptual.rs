@@ -1,6 +1,6 @@
 use crate::{
     imageops::ImageOps,
-    math::{dct2_over_matrix, median, Axis},
+    math::{dct2_over_matrix_in_place, median, Axis},
     ColorSpace, ImageHash, ImageHasher,
 };
 
@@ -26,7 +26,7 @@ impl ImageHasher for PerceptualHasher {
         let high_freq = self.convert(img, width, height, self.color_space);
 
         // convert the higher frequency image to a matrix of f64
-        let high_freq_bytes = high_freq
+        let mut dct_matrix = high_freq
             .as_bytes()
             .into_iter()
             .copied()
@@ -34,11 +34,8 @@ impl ImageHasher for PerceptualHasher {
             .collect::<Vec<_>>();
 
         // now we compute the DCT for each column and then for each row
-        let dct_matrix = dct2_over_matrix(
-            &dct2_over_matrix(&high_freq_bytes, width as usize, Axis::Column),
-            width as usize,
-            Axis::Row,
-        );
+        dct2_over_matrix_in_place(&mut dct_matrix, width as usize, Axis::Column);
+        dct2_over_matrix_in_place(&mut dct_matrix, width as usize, Axis::Row);
 
         // now we crop the dct matrix to the actual target width and height
         let scaled_matrix = dct_matrix
