@@ -20,42 +20,39 @@ pub struct PerceptualHasher {
 
 impl ImageHasher for PerceptualHasher {
     fn hash_from_img(&self, img: &image::DynamicImage) -> ImageHash {
-        let high_freq = self.convert(
-            img,
-            self.width * self.factor,
-            self.height * self.factor,
-            self.color_space,
-        );
+        let width = self.width * self.factor;
+        let height = self.height * self.factor;
+
+        let high_freq = self.convert(img, width, height, self.color_space);
 
         // convert the higher frequency image to a matrix of f64
-        let high_freq_bytes = high_freq.as_bytes().to_vec();
-        let high_freq_matrix: Vec<Vec<f64>> = high_freq_bytes
-            .chunks(self.width as usize * self.factor as usize)
-            .map(|x| x.iter().map(|x| *x as f64).collect::<Vec<f64>>())
-            .collect();
+        let high_freq_bytes = high_freq
+            .as_bytes()
+            .into_iter()
+            .copied()
+            .map(|v| v as f64)
+            .collect::<Vec<_>>();
 
         // now we compute the DCT for each column and then for each row
         let dct_matrix = dct2_over_matrix(
-            &dct2_over_matrix(&high_freq_matrix, Axis::Column),
+            &dct2_over_matrix(&high_freq_bytes, width as usize, Axis::Column),
+            width as usize,
             Axis::Row,
         );
 
         // now we crop the dct matrix to the actual target width and height
-        let scaled_matrix: Vec<Vec<f64>> = dct_matrix
-            .iter()
+        let scaled_matrix = dct_matrix
+            .chunks(width as usize)
             .take(self.height as usize)
-            .map(|row| row.iter().take(self.width as usize).cloned().collect())
-            .collect();
+            .flat_map(|row| &row[0..self.width as usize])
+            .copied()
+            .collect::<Vec<_>>();
 
         // compute the median over the flattened matrix
-        let flattened = scaled_matrix
-            .into_iter()
-            .flat_map(|row| row.into_iter())
-            .collect::<Vec<_>>();
-        let median = median(flattened.iter().copied()).unwrap();
+        let median = median(scaled_matrix.iter().copied()).unwrap();
 
         ImageHash::from_stream(
-            flattened.into_iter().map(|pixel| pixel > median),
+            scaled_matrix.into_iter().map(|pixel| pixel > median),
             self.width,
             self.height,
         )

@@ -3,6 +3,7 @@
 - Updated deprecated `image::io::ImageReader` imports
 - Deprecated `ImageHash::new`
 - The `ImageHash` type is now backed by a bit vector instead of a `bool` matrix. The `matrix()` method now creates a new `Vec<Vec<bool>>` from the bit vector, which is very inefficient.
+- All internal usage of `Vec<Vec<...>>` have been eliminated.
 
 # Version 1.4.0
 
