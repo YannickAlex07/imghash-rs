@@ -2,14 +2,14 @@ use bitvec::prelude::*;
 
 #[derive(Debug, PartialEq)]
 pub struct ImageHash {
-    data: Box<[u8]>, // Use a boxed slice to save one word
+    data: BitBox<u8, Msb0>, // Use a boxed slice to save one word
     width: u32,
     height: u32,
 }
 
 impl ImageHash {
     /// Create a new ImageHash from the specified bit matrix.
-    #[deprecated(since = "1.5.0", note = "Use `ImageHash::new_from_bit_vector` instead")]
+    #[deprecated(since = "1.5.0", note = "Use `ImageHash::from_stream` instead")]
     pub fn new(matrix: Vec<Vec<bool>>) -> ImageHash {
         if matrix.is_empty() || matrix.first().unwrap().is_empty() {
             panic!("Matrix cannot be empty");
@@ -19,49 +19,46 @@ impl ImageHash {
         // If not, this is a critical issue and likely a bug in the code
         // that creates the hash -> therefore a panic here is appropriate
         let width = matrix.first().unwrap().len();
-        matrix.iter().for_each(|row| {
-            if row.len() != width {
-                panic!("All rows must have the same length");
-            }
-        });
-
         let height = matrix.len();
-        let size = (width * height + 7) / 8;
-        let padding = size * 8 - (width * height);
 
-        let mut data = vec![0_u8; size];
-        let bits = data.view_bits_mut::<Msb0>();
+        if matrix.iter().any(|row| row.len() != width) {
+            panic!("All rows must have the same length");
+        }
 
-        matrix
-            .into_iter()
-            .enumerate()
-            .flat_map(move |(y, arr)| arr.into_iter().enumerate().map(move |(x, bit)| (x, y, bit)))
-            .for_each(move |(x, y, bit)| bits.set(y * width + x + padding, bit));
-
-        Self::new_from_bit_vector(data, width as u32, height as u32)
+        Self::from_stream(
+            matrix.into_iter().flat_map(Vec::into_iter),
+            width as u32,
+            height as u32,
+        )
     }
 
-    /// Create a new ImageHash from the specified bit vector.
-    ///
-    /// Bits are stored starting from the most significant bit (MSB) to the least significant bit (LSB).
-    ///
-    /// The first few bits in the vector must be padded to 8 bits.
-    pub(crate) fn new_from_bit_vector(
-        data: impl AsRef<[u8]>,
+    /// Create a new ImageHash from the specified bits stream.
+    pub(crate) fn from_stream(
+        stream: impl IntoIterator<Item = bool>,
         width: u32,
         height: u32,
     ) -> ImageHash {
         let length = width as usize * height as usize;
         let size = (length + 7) / 8;
+        let padding = size * 8 - length;
 
-        let data = data.as_ref();
+        let buf = vec![0_u8; size];
+        let mut data = BitBox::from_bitslice(&buf.view_bits::<Msb0>()[padding..]);
+        let mut count = 0;
 
-        if data.len() != size {
+        stream.into_iter().enumerate().for_each(|(i, bit)| {
+            data.set(i, bit);
+            count += 1;
+        });
+
+        if count != length {
             panic!("Data length does not match the specified width and height");
         }
 
+        data.fill_uninitialized(false);
+
         ImageHash {
-            data: data.to_vec().into_boxed_slice(),
+            data,
             width,
             height,
         }
@@ -74,14 +71,13 @@ impl ImageHash {
     )]
     pub fn matrix(&self) -> Vec<Vec<bool>> {
         let width = self.width as usize;
-        let padding = self.data.len() * 8 - (self.width as usize * self.height as usize);
-        let view = self.data.view_bits::<Msb0>();
 
         (0..self.height as usize)
             .map(|y| {
                 (0..self.width as usize)
                     .map(|x| {
-                        view.get(y * width + x + padding)
+                        self.data
+                            .get(y * width + x)
                             .as_deref()
                             .copied()
                             .unwrap_or(false)
@@ -97,14 +93,7 @@ impl ImageHash {
         note = "This method is inefficient because it creates a new Vec<bool>."
     )]
     pub fn flatten(&self) -> Vec<bool> {
-        let padding = self.data.len() * 8 - (self.width as usize * self.height as usize);
-
-        self.data
-            .view_bits::<Msb0>()
-            .iter()
-            .skip(padding)
-            .map(|v| *v)
-            .collect()
+        self.data.iter().map(|v| *v).collect()
     }
 
     /// The shape of the matrix that represents the [`ImageHash`]
@@ -119,14 +108,10 @@ impl ImageHash {
             return Err("Cannot compute distance of hashes with different sizes".to_string());
         }
 
-        let padding = self.data.len() * 8 - (self.width as usize * self.height as usize);
-
         Ok(self
             .data
-            .view_bits::<Msb0>()
             .iter()
-            .zip(other.data.view_bits::<Msb0>().iter())
-            .skip(padding)
+            .zip(other.data.iter())
             .take(self.width as usize * self.height as usize)
             .fold(0, |acc, (a, b)| acc + (a != b) as usize))
     }
@@ -142,7 +127,7 @@ impl ImageHash {
 
         let mut result = Vec::new();
 
-        for byte in self.data.iter() {
+        for byte in self.data.as_raw_slice().iter() {
             write!(&mut result, "{:02x}", byte).unwrap();
         }
 
@@ -190,6 +175,9 @@ impl ImageHash {
         }
 
         // we create a bit vector of the correct size
+        let size = (length + 7) / 8;
+        let padding = size * 8 - length;
+
         let mut data = vec![0_u8; (length + 7) / 8];
 
         let mut x = 0;
@@ -221,7 +209,11 @@ impl ImageHash {
             x += 1;
         }
 
-        Ok(Self::new_from_bit_vector(data, width, height))
+        Ok(ImageHash {
+            data: BitBox::from_bitslice(&data.view_bits::<Msb0>()[padding..]),
+            width,
+            height,
+        })
     }
 }
 

@@ -1,5 +1,4 @@
 use crate::{imageops::ImageOps, ColorSpace, ImageHash, ImageHasher};
-use bitvec::prelude::*;
 
 pub struct AverageHasher {
     /// The target width of the matrix
@@ -16,26 +15,18 @@ pub struct AverageHasher {
 impl ImageHasher for AverageHasher {
     fn hash_from_img(&self, img: &image::DynamicImage) -> ImageHash {
         let converted = self.convert(img, self.width, self.height, &self.color_space);
-        let mean: usize = converted
+        let mean = converted
             .as_bytes()
             .to_vec()
             .iter()
             .fold(0, |acc, x| acc + *x as usize)
             / (self.width as usize * self.height as usize);
 
-        let size = (self.width as usize * self.height as usize + 7) / 8;
-        let padding = size * 8 - (self.width as usize * self.height as usize);
-
-        let mut bits = vec![0_u8; size];
-        let data = bits.view_bits_mut::<Msb0>();
-
-        for (i, p) in converted.as_bytes().to_vec().iter().enumerate() {
-            if *p as usize > mean {
-                data.set(i + padding, true);
-            }
-        }
-
-        ImageHash::new_from_bit_vector(bits, self.width, self.height)
+        ImageHash::from_stream(
+            converted.as_bytes().iter().map(|&p| p as usize > mean),
+            self.width,
+            self.height,
+        )
     }
 }
 

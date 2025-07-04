@@ -88,12 +88,13 @@ pub fn dct2_over_matrix(input: &Vec<Vec<f64>>, axis: Axis) -> Vec<Vec<f64>> {
 /// # Returns
 /// * Returns a float that represents the median
 /// * Returns `None` if `input` is empty
-pub fn median(input: &[f64]) -> Option<f64> {
-    if input.is_empty() {
+pub fn median(input: impl IntoIterator<Item = f64>) -> Option<f64> {
+    let mut sorted = input.into_iter().collect::<Vec<_>>();
+
+    if sorted.is_empty() {
         return None;
     }
 
-    let mut sorted = input.to_vec();
     sorted.sort_by(|a, b| a.partial_cmp(b).unwrap());
 
     let mid = sorted.len() / 2;
@@ -276,7 +277,7 @@ mod tests {
         let input = vec![3., 2., 1., 4.];
 
         // Act
-        let result = median(&input);
+        let result = median(input);
 
         // Assert
         assert_eq!(result, Some(2.5));
@@ -288,7 +289,7 @@ mod tests {
         let input = vec![3., 4., 1., 2., 5.];
 
         // Act
-        let result = median(&input);
+        let result = median(input);
 
         // Assert
         assert_eq!(result, Some(3.));
@@ -300,7 +301,7 @@ mod tests {
         let input = vec![];
 
         // Act
-        let result = median(&input);
+        let result = median(input);
 
         // Assert
         assert_eq!(result, None);

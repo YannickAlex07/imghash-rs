@@ -3,7 +3,6 @@ use crate::{
     math::{dct2_over_matrix, median, Axis},
     ColorSpace, ImageHash, ImageHasher,
 };
-use bitvec::prelude::*;
 
 pub struct PerceptualHasher {
     /// The target width of the matrix
@@ -48,24 +47,18 @@ impl ImageHasher for PerceptualHasher {
             .map(|row| row.iter().take(self.width as usize).cloned().collect())
             .collect();
 
-        // compute the median over the flattend matrix
-        let flattened: Vec<f64> = scaled_matrix.iter().flatten().copied().collect();
-        let median = median(&flattened).unwrap();
+        // compute the median over the flattened matrix
+        let flattened = scaled_matrix
+            .into_iter()
+            .flat_map(|row| row.into_iter())
+            .collect::<Vec<_>>();
+        let median = median(flattened.iter().copied()).unwrap();
 
-        // compare each pixel of our scaled image to the mean
-        let size = (self.width as usize * self.height as usize + 7) / 8;
-        let padding = size * 8 - (self.width as usize * self.height as usize);
-
-        let mut bits = vec![0_u8; size];
-        let data = bits.view_bits_mut::<Msb0>();
-
-        for (i, row) in scaled_matrix.iter().enumerate() {
-            for (j, pixel) in row.iter().enumerate() {
-                data.set(i * self.width as usize + j + padding, *pixel > median);
-            }
-        }
-
-        ImageHash::new_from_bit_vector(bits, self.width, self.height)
+        ImageHash::from_stream(
+            flattened.into_iter().map(|pixel| pixel > median),
+            self.width,
+            self.height,
+        )
     }
 }
 
