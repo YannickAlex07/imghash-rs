@@ -24,7 +24,7 @@ impl ImageHasher for PerceptualHasher {
             img,
             self.width * self.factor,
             self.height * self.factor,
-            &self.color_space,
+            self.color_space,
         );
 
         // convert the higher frequency image to a matrix of f64

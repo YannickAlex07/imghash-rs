@@ -1,7 +1,9 @@
 use image::{imageops::FilterType, DynamicImage, GenericImageView, GrayImage};
 use rayon::prelude::*;
 
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Copy, Default)]
 pub enum ColorSpace {
+    #[default]
     REC709,
     REC601,
 }
@@ -15,11 +17,11 @@ pub trait ImageOps {
     ///
     /// # Returns
     /// * The converted dynamic image
-    fn grayscale(&self, img: &DynamicImage, space: &ColorSpace) -> DynamicImage {
+    fn grayscale(&self, img: &DynamicImage, color_space: ColorSpace) -> DynamicImage {
         let mut buffer = GrayImage::new(img.width(), img.height());
 
         let coefficients: [f64; 3];
-        match space {
+        match color_space {
             ColorSpace::REC709 => coefficients = [0.2126, 0.7152, 0.0722],
             ColorSpace::REC601 => coefficients = [0.299, 0.587, 0.114],
         }
@@ -53,7 +55,7 @@ pub trait ImageOps {
         img: &DynamicImage,
         width: u32,
         height: u32,
-        color_space: &ColorSpace,
+        color_space: ColorSpace,
     ) -> DynamicImage {
         let filter = FilterType::Lanczos3;
 
@@ -96,7 +98,7 @@ mod tests {
         let converter = Converter {};
 
         // Act
-        let grayscale = converter.grayscale(&test_img, &ColorSpace::REC601);
+        let grayscale = converter.grayscale(&test_img, ColorSpace::REC601);
 
         // Assert
         assert_eq!(grayscale, grayscale_img);
@@ -118,7 +120,7 @@ mod tests {
         let converter = Converter {};
 
         // Act
-        let converted = converter.convert(&test_img, 32, 32, &ColorSpace::REC601);
+        let converted = converter.convert(&test_img, 32, 32, ColorSpace::REC601);
 
         // Assert
         assert_eq!(converted, converted_img);
@@ -140,7 +142,7 @@ mod tests {
         let converter = Converter {};
 
         // Act
-        let grayscale = converter.grayscale(&test_img, &ColorSpace::REC709);
+        let grayscale = converter.grayscale(&test_img, ColorSpace::REC709);
 
         // Assert
         assert_eq!(grayscale, grayscale_img);
@@ -162,7 +164,7 @@ mod tests {
         let converter = Converter {};
 
         // Act
-        let converted = converter.convert(&test_img, 32, 32, &ColorSpace::REC709);
+        let converted = converter.convert(&test_img, 32, 32, ColorSpace::REC709);
 
         // Assert
         assert_eq!(converted, converted_img);

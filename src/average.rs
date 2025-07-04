@@ -14,7 +14,7 @@ pub struct AverageHasher {
 
 impl ImageHasher for AverageHasher {
     fn hash_from_img(&self, img: &image::DynamicImage) -> ImageHash {
-        let converted = self.convert(img, self.width, self.height, &self.color_space);
+        let converted = self.convert(img, self.width, self.height, self.color_space);
         let mean = converted
             .as_bytes()
             .to_vec()
