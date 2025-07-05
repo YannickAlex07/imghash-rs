@@ -131,14 +131,16 @@ impl ImageHash {
 
         let mut result = Vec::new();
 
-        for byte in self.data.as_raw_slice().iter() {
-            write!(&mut result, "{:02x}", byte).unwrap();
-        }
-
         let nibbles = (self.width * self.height + 3) / 4;
+        let odd = nibbles % 2 == 1;
 
-        if nibbles % 2 == 1 {
-            result.remove(0);
+        for byte in self.data.as_raw_slice().iter() {
+            // Skip the leading '0' if the number of nibbles is odd
+            if odd && result.is_empty() {
+                write!(&mut result, "{:01x}", byte).unwrap();
+            } else {
+                write!(&mut result, "{:02x}", byte).unwrap();
+            }
         }
 
         String::from_utf8(result).unwrap()
