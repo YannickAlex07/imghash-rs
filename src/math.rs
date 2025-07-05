@@ -14,7 +14,11 @@ pub enum Axis {
 /// * `input`: A mutable reference to a slice of floats.
 /// * `skip`: The number of elements to skip between each DCT value.
 ///           This is used to iterate the elements column-wise.
-pub fn dct2_in_place(input: &mut [f64], skip: usize) {
+pub fn dct2_in_place(input: &mut [f64], skip: usize, buf: &mut [f64]) {
+    if skip == 0 {
+        panic!("Skip value must be greater than 0");
+    }
+
     // we cannot compute the DCT for an empty input
     if input.is_empty() {
         return;
@@ -22,7 +26,11 @@ pub fn dct2_in_place(input: &mut [f64], skip: usize) {
 
     let n = (input.len() + skip - 1) / skip;
 
-    let dct = (0..n)
+    if n > buf.len() {
+        panic!("Buffer is too small for the DCT result");
+    }
+
+    (0..n)
         .map(|k| {
             2 as f64
                 * input
@@ -38,11 +46,15 @@ pub fn dct2_in_place(input: &mut [f64], skip: usize) {
                     })
                     .sum::<f64>()
         })
-        .collect::<Vec<_>>();
+        .enumerate()
+        .for_each(|(i, value)| buf[i] = value);
 
-    dct.into_iter().enumerate().for_each(|(i, value)| {
-        input[i * skip] = value;
-    });
+    input
+        .chunks_mut(skip)
+        .zip(buf.iter().copied())
+        .for_each(|(x, value)| {
+            x[0] = value;
+        });
 }
 
 /// Computes the DCT 2 in-place over a matrix.
@@ -59,13 +71,18 @@ pub fn dct2_over_matrix_in_place(input: &mut [f64], width: usize, axis: Axis) {
     }
 
     match axis {
-        Axis::Row => input
-            .chunks_mut(width)
-            .for_each(|row| dct2_in_place(row, 1)),
+        Axis::Row => {
+            let buf = &mut vec![0.0; width];
+            input
+                .chunks_mut(width)
+                .for_each(|row| dct2_in_place(row, 1, buf))
+        }
         Axis::Column => {
+            let buf = &mut vec![0.0; input.len() / width];
+
             // Step each column of the matrix, skipping `width` elements
             for n in 0..(input.len() / width) {
-                dct2_in_place(&mut input[n..], width);
+                dct2_in_place(&mut input[n..], width, buf);
             }
         }
     }
@@ -106,7 +123,8 @@ mod tests {
         let mut input = vec![1., 2., 3., 4.];
 
         // Act
-        dct2_in_place(&mut input, 1);
+        let buf = &mut vec![0.0; input.len()];
+        dct2_in_place(&mut input, 1, buf);
 
         // Assert
         assert_eq!(
@@ -126,7 +144,8 @@ mod tests {
         let mut input = vec![];
 
         // Act
-        dct2_in_place(&mut input, 1);
+        let buf = &mut vec![0.0; input.len()];
+        dct2_in_place(&mut input, 1, buf);
 
         // Assert
         assert_eq!(input, vec![]);
