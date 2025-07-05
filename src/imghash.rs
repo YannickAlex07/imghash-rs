@@ -9,7 +9,13 @@ pub struct ImageHash {
 
 impl ImageHash {
     /// Create a new ImageHash from the specified bit matrix.
-    #[deprecated(since = "1.5.0", note = "Use `ImageHash::from_stream` instead")]
+    ///
+    /// # Arguments
+    /// * `matrix`: A 2D `Vec` of `bool` values.
+    ///             All rows must be non-empty and have the same length.
+    ///
+    /// # Returns
+    /// * The new [`ImageHash`].
     pub fn new(matrix: Vec<Vec<bool>>) -> ImageHash {
         if matrix.is_empty() || matrix.first().unwrap().is_empty() {
             panic!("Matrix cannot be empty");
@@ -25,7 +31,7 @@ impl ImageHash {
             panic!("All rows must have the same length");
         }
 
-        Self::from_stream(
+        Self::from_bool_iter(
             matrix.into_iter().flat_map(Vec::into_iter),
             width as u32,
             height as u32,
@@ -33,20 +39,29 @@ impl ImageHash {
     }
 
     /// Create a new ImageHash from the specified bits stream.
-    pub(crate) fn from_stream(
-        stream: impl IntoIterator<Item = bool>,
+    ///
+    /// # Arguments
+    /// * `iter`: An iterator that yields `bool` values representing the bits of the hash.
+    ///           The length of the stream must match `width * height`.
+    /// * `width`: The width of the hash.
+    /// * `height`: The height of the hash.
+    ///
+    /// # Returns
+    /// * The new [`ImageHash`].
+    pub fn from_bool_iter(
+        iter: impl IntoIterator<Item = bool>,
         width: u32,
         height: u32,
     ) -> ImageHash {
         let length = width as usize * height as usize;
         let size = (length + 7) / 8;
-        let padding = size * 8 - length;
+        let padding = (size * 8) - length;
 
-        let buf = vec![0_u8; size];
-        let mut data = BitBox::from_bitslice(&buf.view_bits::<Msb0>()[padding..]);
+        let buf = bitbox![u8, Msb0; 0; size * 8];
+        let mut data: BitBox<u8, Msb0> = buf[padding..].into();
         let mut count = 0;
 
-        stream.into_iter().enumerate().for_each(|(i, bit)| {
+        iter.into_iter().enumerate().for_each(|(i, bit)| {
             data.set(i, bit);
             count += 1;
         });
@@ -70,21 +85,10 @@ impl ImageHash {
         note = "This method is inefficient because it creates a new Vec<Vec<bool>>."
     )]
     pub fn matrix(&self) -> Vec<Vec<bool>> {
-        let width = self.width as usize;
-
-        (0..self.height as usize)
-            .map(|y| {
-                (0..self.width as usize)
-                    .map(|x| {
-                        self.data
-                            .get(y * width + x)
-                            .as_deref()
-                            .copied()
-                            .unwrap_or(false)
-                    })
-                    .collect::<Vec<_>>()
-            })
-            .collect::<Vec<_>>()
+        self.data
+            .chunks(self.width as usize)
+            .map(|chunk| chunk.iter().by_vals().collect::<Vec<bool>>())
+            .collect()
     }
 
     /// Flattens the bit matrix that represents the [`ImageHash`] into a single vector.
@@ -93,7 +97,7 @@ impl ImageHash {
         note = "This method is inefficient because it creates a new Vec<bool>."
     )]
     pub fn flatten(&self) -> Vec<bool> {
-        self.data.iter().map(|v| *v).collect()
+        self.data.iter().by_vals().collect()
     }
 
     /// The shape of the matrix that represents the [`ImageHash`]
@@ -168,49 +172,39 @@ impl ImageHash {
         }
 
         // guard against a string that is too short or too long for the specified size
+        let size = (length + 7) / 8;
         let nibbles = (length + 3) / 4;
+        let padding = size * 8 - length;
 
         if s.len() != nibbles {
             return Err("String is too short or too long for the specified size".to_string());
         }
 
+        let mut iter =
+            std::iter::repeat_n('0', if nibbles % 2 == 1 { 1 } else { 0 }).chain(s.chars());
+
         // we create a bit vector of the correct size
-        let size = (length + 7) / 8;
-        let padding = size * 8 - length;
+        let mut data = bitbox!(u8, Msb0; 0; size * 8);
+        let data_mut = data.as_raw_mut_slice();
 
-        let mut data = vec![0_u8; (length + 7) / 8];
-
-        let mut x = 0;
-        let mut iter = s.chars();
-
-        loop {
-            let Some(c1) = iter.next() else {
-                break;
-            };
-
-            let hex1 = c1
+        for i in 0..size {
+            let hi = iter
+                .next()
+                .unwrap()
                 .to_digit(16)
-                .ok_or_else(|| "invalid digit found in string".to_string())?
-                as u8;
+                .ok_or_else(|| "invalid digit found in string".to_string())?;
 
-            data[x] = if x == 0 && nibbles % 2 == 1 {
-                // if the first nibble is odd, there is assumed a leading zero
-                hex1
-            } else {
-                let Some(c2) = iter.next() else {
-                    break;
-                };
-                hex1 * 16
-                    + c2.to_digit(16)
-                        .ok_or_else(|| "invalid digit found in string".to_string())?
-                        as u8
-            };
+            let lo = iter
+                .next()
+                .unwrap()
+                .to_digit(16)
+                .ok_or_else(|| "invalid digit found in string".to_string())?;
 
-            x += 1;
+            data_mut[i] = ((hi << 4) + lo) as u8;
         }
 
         Ok(ImageHash {
-            data: BitBox::from_bitslice(&data.view_bits::<Msb0>()[padding..]),
+            data: data[padding..].into(),
             width,
             height,
         })

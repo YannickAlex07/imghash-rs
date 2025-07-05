@@ -22,7 +22,7 @@ impl ImageHasher for DifferenceHasher {
             .collect::<Vec<_>>()
             .into_boxed_slice();
 
-        ImageHash::from_stream(
+        ImageHash::from_bool_iter(
             compare_matrix
                 .iter()
                 .flat_map(|row| row.windows(2).map(|window| window[0] < window[1])),

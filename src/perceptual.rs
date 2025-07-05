@@ -48,7 +48,7 @@ impl ImageHasher for PerceptualHasher {
         // compute the median over the flattened matrix
         let median = median(scaled_matrix.iter().copied()).unwrap();
 
-        ImageHash::from_stream(
+        ImageHash::from_bool_iter(
             scaled_matrix.into_iter().map(|pixel| pixel > median),
             self.width,
             self.height,

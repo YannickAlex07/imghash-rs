@@ -22,7 +22,7 @@ impl ImageHasher for AverageHasher {
             .fold(0, |acc, x| acc + *x as usize)
             / (self.width as usize * self.height as usize);
 
-        ImageHash::from_stream(
+        ImageHash::from_bool_iter(
             converted.as_bytes().iter().map(|&p| p as usize > mean),
             self.width,
             self.height,
