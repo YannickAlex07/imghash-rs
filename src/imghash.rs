@@ -7,9 +7,6 @@ pub struct ImageHash {
 
     // Number of columns.
     width: u32,
-
-    // Number of rows.
-    height: u32,
 }
 
 impl ImageHash {
@@ -74,11 +71,7 @@ impl ImageHash {
 
         data.fill_uninitialized(false);
 
-        ImageHash {
-            data,
-            width,
-            height,
-        }
+        ImageHash { data, width }
     }
 
     /// Create an iterator yielding `bool` values over the bits of an [`ImageHash`].
@@ -112,7 +105,7 @@ impl ImageHash {
 
     /// The shape of the matrix that represents the [`ImageHash`], in (number of rows, number of columns).
     pub fn shape(&self) -> (usize, usize) {
-        (self.height as usize, self.width as usize)
+        (self.data.len() / self.width as usize, self.width as usize)
     }
 
     /// The hamming distance between this hash and the other hash.
@@ -126,8 +119,8 @@ impl ImageHash {
             .data
             .iter()
             .zip(other.data.iter())
-            .take(self.width as usize * self.height as usize)
-            .fold(0, |acc, (a, b)| acc + (a != b) as usize))
+            .filter(|(a, b)| a != b)
+            .count())
     }
 
     /// Encodes the bit matrix that represents the [`ImageHash`] into a hexadecimal string.
@@ -135,13 +128,16 @@ impl ImageHash {
     pub fn encode(&self) -> String {
         use std::io::Write;
 
-        if self.width == 0 && self.height == 0 {
+        if self.data.len() == 0 {
             panic!("Cannot encode an empty matrix")
+        }
+        if self.width == 0 {
+            panic!("Matrix cannot have no columns");
         }
 
         let mut result = Vec::new();
 
-        let length = self.width as usize * self.height as usize;
+        let length = self.data.len();
         let size = (length + 7) / 8;
         let padding = (size * 8) - length;
         let nibbles = (length + 3) / 4;
@@ -227,11 +223,7 @@ impl ImageHash {
         let data =
             BitBox::<u8, Lsb0>::from_iter(data.view_bits::<Msb0>()[padding..].iter().by_vals());
 
-        Ok(ImageHash {
-            data,
-            width,
-            height,
-        })
+        Ok(ImageHash { data, width })
     }
 }
 
