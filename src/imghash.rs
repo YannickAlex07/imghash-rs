@@ -2,16 +2,21 @@ use bitvec::prelude::*;
 
 #[derive(Debug, PartialEq)]
 pub struct ImageHash {
-    data: BitBox<u8, Msb0>, // Use a boxed slice to save one word
+    // The internal bit-vector stored in LSB order.
+    data: BitBox<u8, Lsb0>,
+
+    // Number of columns.
     width: u32,
+
+    // Number of rows.
     height: u32,
 }
 
 impl ImageHash {
-    /// Create a new ImageHash from the specified bit matrix.
+    /// Create a new [`ImageHash`] from the specified bit matrix.
     ///
     /// # Arguments
-    /// * `matrix`: A 2D `Vec` of `bool` values.
+    /// * `matrix`: A 2D `Vec` of `bool` values in rows of columns.
     ///             All rows must be non-empty and have the same length.
     ///
     /// # Returns
@@ -38,13 +43,13 @@ impl ImageHash {
         )
     }
 
-    /// Create a new ImageHash from the specified bits stream.
+    /// Create a new [`ImageHash`] from the specified bits stream.
     ///
     /// # Arguments
     /// * `iter`: An iterator that yields `bool` values representing the bits of the hash.
     ///           The length of the stream must match `width * height`.
-    /// * `width`: The width of the hash.
-    /// * `height`: The height of the hash.
+    /// * `width`: Number of columns of the hash.
+    /// * `height`: Number of rows of the hash.
     ///
     /// # Returns
     /// * The new [`ImageHash`].
@@ -54,11 +59,8 @@ impl ImageHash {
         height: u32,
     ) -> ImageHash {
         let length = width as usize * height as usize;
-        let size = (length + 7) / 8;
-        let padding = (size * 8) - length;
 
-        let buf = bitbox![u8, Msb0; 0; size * 8];
-        let mut data: BitBox<u8, Msb0> = buf[padding..].into();
+        let mut data = bitbox![u8, Lsb0; 0; length];
         let mut count = 0;
 
         iter.into_iter().enumerate().for_each(|(i, bit)| {
@@ -79,10 +81,18 @@ impl ImageHash {
         }
     }
 
+    /// Create an iterator yielding `bool` values over the bits of an [`ImageHash`].
+    ///
+    /// # Returns
+    /// * Bits from the [`ImageHash`], by column then by row.
+    pub fn iter_bool(&self) -> impl Iterator<Item = bool> + '_ {
+        self.data.iter().by_vals()
+    }
+
     /// Returns a copy of the underlying matrix that represents the [`ImageHash`].
     #[deprecated(
         since = "1.5.0",
-        note = "This method is inefficient because it creates a new Vec<Vec<bool>>."
+        note = "This method is inefficient because it creates a new Vec<Vec<bool>>. Consider using `iter_bool` instead."
     )]
     pub fn matrix(&self) -> Vec<Vec<bool>> {
         self.data
@@ -94,19 +104,19 @@ impl ImageHash {
     /// Flattens the bit matrix that represents the [`ImageHash`] into a single vector.
     #[deprecated(
         since = "1.5.0",
-        note = "This method is inefficient because it creates a new Vec<bool>."
+        note = "This method is inefficient because it creates a new Vec<bool>. Consider using `iter_bool` instead."
     )]
     pub fn flatten(&self) -> Vec<bool> {
-        self.data.iter().by_vals().collect()
+        self.iter_bool().collect()
     }
 
-    /// The shape of the matrix that represents the [`ImageHash`]
+    /// The shape of the matrix that represents the [`ImageHash`], in (number of rows, number of columns).
     pub fn shape(&self) -> (usize, usize) {
         (self.height as usize, self.width as usize)
     }
 
-    /// The hamming distance between this hash and the other hash. The hamming distance is the
-    /// number of bits that differ between the two hashes.
+    /// The hamming distance between this hash and the other hash.
+    /// The hamming distance is the number of bits that differ between the two hashes.
     pub fn distance(&self, other: &ImageHash) -> Result<usize, String> {
         if self.shape() != other.shape() {
             return Err("Cannot compute distance of hashes with different sizes".to_string());
@@ -131,10 +141,18 @@ impl ImageHash {
 
         let mut result = Vec::new();
 
-        let nibbles = (self.width * self.height + 3) / 4;
+        let length = self.width as usize * self.height as usize;
+        let size = (length + 7) / 8;
+        let padding = (size * 8) - length;
+        let nibbles = (length + 3) / 4;
         let odd = nibbles % 2 == 1;
 
-        for byte in self.data.as_raw_slice().iter() {
+        let mut buffer = BitBox::<u8, Msb0>::from_iter(
+            std::iter::repeat_n(false, padding).chain(self.iter_bool()),
+        );
+        buffer.fill_uninitialized(false);
+
+        for byte in buffer.as_raw_slice().iter() {
             // Skip the leading '0' if the number of nibbles is odd
             if odd && result.is_empty() {
                 write!(&mut result, "{:01x}", byte).unwrap();
@@ -176,20 +194,20 @@ impl ImageHash {
         // guard against a string that is too short or too long for the specified size
         let size = (length + 7) / 8;
         let nibbles = (length + 3) / 4;
-        let padding = size * 8 - length;
+        let padding = (size * 8) - length;
 
         if s.len() != nibbles {
             return Err("String is too short or too long for the specified size".to_string());
         }
 
+        // Add padding if the number of nibbles is odd
         let mut iter =
             std::iter::repeat_n('0', if nibbles % 2 == 1 { 1 } else { 0 }).chain(s.chars());
 
         // we create a bit vector of the correct size
-        let mut data = bitbox!(u8, Msb0; 0; size * 8);
-        let data_mut = data.as_raw_mut_slice();
+        let mut data = Vec::<u8>::with_capacity(size);
 
-        for i in 0..size {
+        for _ in 0..size {
             let hi = iter
                 .next()
                 .unwrap()
@@ -202,11 +220,15 @@ impl ImageHash {
                 .to_digit(16)
                 .ok_or_else(|| "invalid digit found in string".to_string())?;
 
-            data_mut[i] = ((hi << 4) + lo) as u8;
+            let value = ((hi << 4) + lo) as u8;
+            data.push(value);
         }
 
+        let data =
+            BitBox::<u8, Lsb0>::from_iter(data.view_bits::<Msb0>()[padding..].iter().by_vals());
+
         Ok(ImageHash {
-            data: data[padding..].into(),
+            data,
             width,
             height,
         })
