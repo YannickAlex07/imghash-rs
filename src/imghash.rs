@@ -1,83 +1,163 @@
+use bitvec::prelude::*;
+
 #[derive(Debug, PartialEq)]
 pub struct ImageHash {
-    matrix: Vec<Vec<bool>>,
+    // The internal bit-vector stored in LSB order.
+    data: BitBox<u8, Lsb0>,
+
+    // Number of columns.
+    width: u32,
 }
 
 impl ImageHash {
-    /// Create a new ImageHash from the specificed bit matrix.
+    /// Create a new [`ImageHash`] from the specified bit matrix.
+    ///
+    /// # Arguments
+    /// * `matrix`: A 2D `Vec` of `bool` values in rows of columns.
+    ///             All rows must be non-empty and have the same length.
+    ///
+    /// # Returns
+    /// * The new [`ImageHash`].
     pub fn new(matrix: Vec<Vec<bool>>) -> ImageHash {
+        if matrix.is_empty() || matrix.first().unwrap().is_empty() {
+            panic!("Matrix cannot be empty");
+        }
+
         // Ensures that the matrix rows all have the same length.
         // If not, this is a critical issue and likely a bug in the code
         // that creates the hash -> therefore a panic here is appropriate
-        let first_length = matrix.first().unwrap().len();
-        matrix.iter().for_each(|row| {
-            if row.len() != first_length {
-                panic!("All rows must have the same length");
-            }
+        let width = matrix.first().unwrap().len();
+        let height = matrix.len();
+
+        if matrix.iter().any(|row| row.len() != width) {
+            panic!("All rows must have the same length");
+        }
+
+        Self::from_bool_iter(
+            matrix.into_iter().flat_map(Vec::into_iter),
+            width as u32,
+            height as u32,
+        )
+    }
+
+    /// Create a new [`ImageHash`] from the specified bits stream.
+    ///
+    /// # Arguments
+    /// * `iter`: An iterator that yields `bool` values representing the bits of the hash.
+    ///           The length of the stream must match `width * height`.
+    /// * `width`: Number of columns of the hash.
+    /// * `height`: Number of rows of the hash.
+    ///
+    /// # Returns
+    /// * The new [`ImageHash`].
+    pub fn from_bool_iter(
+        iter: impl IntoIterator<Item = bool>,
+        width: u32,
+        height: u32,
+    ) -> ImageHash {
+        let length = width as usize * height as usize;
+
+        let mut data = bitbox![u8, Lsb0; 0; length];
+        let mut count = 0;
+
+        iter.into_iter().enumerate().for_each(|(i, bit)| {
+            data.set(i, bit);
+            count += 1;
         });
 
-        ImageHash { matrix }
+        if count != length {
+            panic!("Data length does not match the specified width and height");
+        }
+
+        data.fill_uninitialized(false);
+
+        ImageHash { data, width }
+    }
+
+    /// Create an iterator yielding `bool` values over the bits of an [`ImageHash`].
+    ///
+    /// # Returns
+    /// * Bits from the [`ImageHash`], by column then by row.
+    pub fn iter_bool(&self) -> impl Iterator<Item = bool> + '_ {
+        self.data.iter().by_vals()
     }
 
     /// Returns a copy of the underlying matrix that represents the [`ImageHash`].
+    #[deprecated(
+        since = "1.5.0",
+        note = "This method is inefficient because it creates a new Vec<Vec<bool>>. Consider using `iter_bool` instead."
+    )]
     pub fn matrix(&self) -> Vec<Vec<bool>> {
-        self.matrix.clone()
+        self.data
+            .chunks(self.width as usize)
+            .map(|chunk| chunk.iter().by_vals().collect::<Vec<bool>>())
+            .collect()
     }
 
     /// Flattens the bit matrix that represents the [`ImageHash`] into a single vector.
+    #[deprecated(
+        since = "1.5.0",
+        note = "This method is inefficient because it creates a new Vec<bool>. Consider using `iter_bool` instead."
+    )]
     pub fn flatten(&self) -> Vec<bool> {
-        self.matrix.iter().flatten().copied().collect()
+        self.iter_bool().collect()
     }
 
-    /// The shape of the matrix that represents the [`ImageHash`]
+    /// The shape of the matrix that represents the [`ImageHash`], in (number of rows, number of columns).
     pub fn shape(&self) -> (usize, usize) {
-        (self.matrix.len(), self.matrix.first().unwrap().len())
+        (self.data.len() / self.width as usize, self.width as usize)
     }
 
-    /// The hamming distance between this hash and the other hash. The hamming distance is the
-    /// number of bits that differ between the two hashes.
+    /// The hamming distance between this hash and the other hash.
+    /// The hamming distance is the number of bits that differ between the two hashes.
     pub fn distance(&self, other: &ImageHash) -> Result<usize, String> {
         if self.shape() != other.shape() {
             return Err("Cannot compute distance of hashes with different sizes".to_string());
         }
 
         Ok(self
-            .flatten()
+            .data
             .iter()
-            .zip(other.flatten().iter())
-            .fold(0, |acc, (a, b)| acc + (a != b) as usize))
+            .zip(other.data.iter())
+            .filter(|(a, b)| a != b)
+            .count())
     }
 
     /// Encodes the bit matrix that represents the [`ImageHash`] into a hexadecimal string.
     /// This implementation is strictly compatible with `imagehash` package for Python.
     pub fn encode(&self) -> String {
-        let mut result = "".to_string();
+        use std::io::Write;
 
-        let mut flattened = self.flatten();
-        if flattened.is_empty() {
+        if self.data.len() == 0 {
             panic!("Cannot encode an empty matrix")
         }
+        if self.width == 0 {
+            panic!("Matrix cannot have no columns");
+        }
 
-        // the Python package essentially pads the entire bit array with 0s
-        // until it is cleanly encodable into hexadecimal characters.
-        // this part essentially does the same thing.
-        if flattened.len() % 4 != 0 {
-            let padding = 4 - (flattened.len() % 4);
+        let mut result = Vec::new();
 
-            for _ in 0..padding {
-                flattened.push(false);
+        let length = self.data.len();
+        let size = (length + 7) / 8;
+        let padding = (size * 8) - length;
+        let nibbles = (length + 3) / 4;
+        let odd = nibbles % 2 == 1;
+
+        let mut buffer = BitBox::<u8, Msb0>::from_iter(
+            std::iter::repeat_n(false, padding).chain(self.iter_bool()),
+        );
+        buffer.fill_uninitialized(false);
+
+        for byte in buffer.as_raw_slice().iter() {
+            // Skip the leading '0' if the number of nibbles is odd
+            if odd && result.is_empty() {
+                write!(&mut result, "{:01x}", byte).unwrap();
+            } else {
+                write!(&mut result, "{:02x}", byte).unwrap();
             }
-
-            flattened.rotate_right(padding)
         }
 
-        // we convert the bit array one character at a time
-        for chunk in flattened.chunks(4) {
-            let byte = chunk.iter().fold(0, |acc, &bit| (acc << 1) | bit as u8);
-            result += &format!("{:x}", byte);
-        }
-
-        result
+        String::from_utf8(result).unwrap()
     }
 
     /// Decodes a hexadecimal string into a bit matrix that represents the [`ImageHash`].
@@ -90,15 +170,15 @@ impl ImageHash {
     /// the `hash_size`-parameter when generating the hash. Use this value for the `width` and `height`.
     ///
     /// This implementation actually deviates slightly from the original imagehash package, because
-    /// it allows the decoding of hashes that have been generated on non-square matricies. This is because
-    /// the original package actually only allows the generation of hashes on square matricies, however this
+    /// it allows the decoding of hashes that have been generated on non-square matrices. This is because
+    /// the original package actually only allows the generation of hashes on square matrices, however this
     /// crate does allow arbitrary dimensions.
-    pub fn decode(s: &str, width: usize, height: usize) -> Result<ImageHash, String> {
+    pub fn decode(s: &str, width: u32, height: u32) -> Result<ImageHash, String> {
         // first we validate that the width and height actually make sense with the given string
-        let total_length = width * height;
+        let length = width as usize * height as usize;
 
         // guard against too small values
-        if total_length == 0 {
+        if length == 0 {
             return Err("Width or height cannot be 0".to_string());
         }
 
@@ -108,64 +188,42 @@ impl ImageHash {
         }
 
         // guard against a string that is too short or too long for the specified size
-        match total_length % 4 {
-            0 => {
-                if total_length / 4 != s.len() {
-                    return Err(
-                        "String is too short or too long for the specified size".to_string()
-                    );
-                }
-            }
-            remainder => {
-                if (total_length + (4 - remainder)) / 4 != s.len() {
-                    return Err(
-                        "String is too short or too long for the specified size".to_string()
-                    );
-                }
-            }
+        let size = (length + 7) / 8;
+        let nibbles = (length + 3) / 4;
+        let padding = (size * 8) - length;
+
+        if s.len() != nibbles {
+            return Err("String is too short or too long for the specified size".to_string());
         }
 
-        // the encoding essentially pads the entire bit array with 0s to make
-        // it encodable. Here we calculate how many bits were padded, which we can then skip
-        // in the beginning.
-        let mut skip = 0;
-        if total_length % 4 != 0 {
-            skip = 4 - ((width * height) % 4);
+        // Add padding if the number of nibbles is odd
+        let mut iter =
+            std::iter::repeat_n('0', if nibbles % 2 == 1 { 1 } else { 0 }).chain(s.chars());
+
+        // we create a bit vector of the correct size
+        let mut data = Vec::<u8>::with_capacity(size);
+
+        for _ in 0..size {
+            let hi = iter
+                .next()
+                .unwrap()
+                .to_digit(16)
+                .ok_or_else(|| "invalid digit found in string".to_string())?;
+
+            let lo = iter
+                .next()
+                .unwrap()
+                .to_digit(16)
+                .ok_or_else(|| "invalid digit found in string".to_string())?;
+
+            let value = ((hi << 4) + lo) as u8;
+            data.push(value);
         }
 
-        // we create a matrix of the correct size
-        let mut bits: Vec<bool> = vec![];
-        for (i, b) in s.chars().enumerate() {
-            let digit = b.to_ascii_lowercase().to_digit(16);
-            if digit.is_none() {
-                return Err("invalid digit found in string".to_string());
-            }
+        let data =
+            BitBox::<u8, Lsb0>::from_iter(data.view_bits::<Msb0>()[padding..].iter().by_vals());
 
-            // we add the necessary skip that we calculated earlier
-            // for the first character
-            let mut start = 0;
-            if i == 0 {
-                start += skip;
-            }
-
-            // goes through each of the 4 bits that makes up our hexadecimal character
-            for i in start..4 {
-                // we extract the bit from the digit
-                let bit = (digit.unwrap() >> (3 - i)) & 1;
-                bits.push(bit == 1)
-            }
-        }
-
-        let matrix: Vec<Vec<bool>> = bits.chunks(width).map(|x: &[bool]| x.to_vec()).collect();
-
-        // sanity checks
-        if matrix.len() != height || matrix.last().unwrap().len() != width {
-            return Err(
-                "Matrix dimensions do not match the specified width and height".to_string(),
-            );
-        }
-
-        Ok(ImageHash { matrix })
+        Ok(ImageHash { data, width })
     }
 }
 
@@ -184,9 +242,7 @@ mod tests {
         // Assert
         assert_eq!(
             hash,
-            ImageHash {
-                matrix: vec![vec![false, true], vec![true, false]],
-            }
+            ImageHash::new(vec![vec![false, true], vec![true, false]],)
         );
     }
 
@@ -213,9 +269,7 @@ mod tests {
     #[test]
     fn test_image_hash_flatten() {
         // Arrange
-        let hash = ImageHash {
-            matrix: vec![vec![false, true], vec![true, false]],
-        };
+        let hash = ImageHash::new(vec![vec![false, true], vec![true, false]]);
 
         let expected = vec![false, true, true, false];
 
@@ -231,9 +285,7 @@ mod tests {
     #[test]
     fn test_image_hash_shape() {
         // Arrange
-        let hash = ImageHash {
-            matrix: vec![vec![false, true], vec![true, false]],
-        };
+        let hash = ImageHash::new(vec![vec![false, true], vec![true, false]]);
 
         let expected = (2, 2);
 
@@ -252,14 +304,12 @@ mod tests {
 
         // -> resulting bit str: 0010 0100 1111 0000
         // -> resulting hex str: 24F0
-        let hash = ImageHash {
-            matrix: vec![
-                vec![false, false, true, false],
-                vec![false, true, false, false],
-                vec![true, true, true, true],
-                vec![false, false, false, false],
-            ],
-        };
+        let hash = ImageHash::new(vec![
+            vec![false, false, true, false],
+            vec![false, true, false, false],
+            vec![true, true, true, true],
+            vec![false, false, false, false],
+        ]);
 
         // Assert
         assert_eq!(hash.encode(), "24f0");
@@ -271,14 +321,12 @@ mod tests {
 
         // -> resulting bit str: 0110 1010 0011 1110 0001
         // -> resulting hex str: 6A3E1
-        let hash = ImageHash {
-            matrix: vec![
-                vec![false, true, true, false, true],
-                vec![false, true, false, false, false],
-                vec![true, true, true, true, true],
-                vec![false, false, false, false, true],
-            ],
-        };
+        let hash = ImageHash::new(vec![
+            vec![false, true, true, false, true],
+            vec![false, true, false, false, false],
+            vec![true, true, true, true, true],
+            vec![false, false, false, false, true],
+        ]);
 
         // Assert
         assert_eq!(hash.encode(), "6a3e1");
@@ -292,26 +340,20 @@ mod tests {
         // it is divisible by 4
         // -> resulting bit str: 0011 0101 0001 1111
         // -> resulting hex str: 351F
-        let hash = ImageHash {
-            matrix: vec![
-                vec![false, true, true, false, true],
-                vec![false, true, false, false, false],
-                vec![true, true, true, true, true],
-            ],
-        };
+        let hash = ImageHash::new(vec![
+            vec![false, true, true, false, true],
+            vec![false, true, false, false, false],
+            vec![true, true, true, true, true],
+        ]);
 
         // Assert
         assert_eq!(hash.encode(), "351f");
     }
 
     #[test]
-    #[should_panic(expected = "Cannot encode an empty matrix")]
+    #[should_panic(expected = "Matrix cannot be empty")]
     fn test_image_hash_encoding_with_empty_matrix() {
-        // Arrange
-        let hash = ImageHash { matrix: vec![] };
-
-        // Assert
-        hash.encode(); // <- should panic
+        let _ = ImageHash::new(vec![]); // <- should panic
     }
 
     #[test]
@@ -321,9 +363,7 @@ mod tests {
         // should equal to 1 due to added padding
         // -> resulting bit str: 0001
         // -> resulting hex str: 1
-        let hash = ImageHash {
-            matrix: vec![vec![true]],
-        };
+        let hash = ImageHash::new(vec![vec![true]]);
 
         // Assert
         assert_eq!(hash.encode(), "1");
@@ -345,7 +385,7 @@ mod tests {
         let decoded = ImageHash::decode("24f0", 4, 4).unwrap();
 
         // Assert
-        assert_eq!(decoded.matrix, expected);
+        assert_eq!(decoded.matrix(), expected);
     }
 
     #[test]
@@ -362,7 +402,7 @@ mod tests {
         let decoded = ImageHash::decode("6a3e1", 5, 4).unwrap();
 
         // Assert
-        assert_eq!(decoded.matrix, expected);
+        assert_eq!(decoded.matrix(), expected);
     }
 
     #[test]
@@ -378,7 +418,7 @@ mod tests {
         let decoded = ImageHash::decode("351f", 5, 3).unwrap();
 
         // Assert
-        assert_eq!(decoded.matrix, expected);
+        assert_eq!(decoded.matrix(), expected);
     }
 
     #[test]
@@ -390,7 +430,7 @@ mod tests {
         let decoded = ImageHash::decode("1", 1, 1).unwrap();
 
         // Assert
-        assert_eq!(decoded.matrix, expected);
+        assert_eq!(decoded.matrix(), expected);
     }
 
     #[test]
@@ -458,13 +498,9 @@ mod tests {
     #[test]
     fn test_image_hash_distance_with_unequal_hashes() {
         // Arrange
-        let hash1 = ImageHash {
-            matrix: vec![vec![false, true], vec![true, false]],
-        };
+        let hash1 = ImageHash::new(vec![vec![false, true], vec![true, false]]);
 
-        let hash2 = ImageHash {
-            matrix: vec![vec![true, true], vec![false, false]],
-        };
+        let hash2 = ImageHash::new(vec![vec![true, true], vec![false, false]]);
 
         // Act
         let distance = hash1.distance(&hash2);
@@ -479,13 +515,9 @@ mod tests {
     #[test]
     fn test_image_hash_distance_with_equal_hashes() {
         // Arrange
-        let hash1 = ImageHash {
-            matrix: vec![vec![false, true], vec![true, false]],
-        };
+        let hash1 = ImageHash::new(vec![vec![false, true], vec![true, false]]);
 
-        let hash2 = ImageHash {
-            matrix: vec![vec![false, true], vec![true, false]],
-        };
+        let hash2 = ImageHash::new(vec![vec![false, true], vec![true, false]]);
 
         // Act
         let distance = hash1.distance(&hash2);
@@ -500,13 +532,9 @@ mod tests {
     #[test]
     fn test_image_hash_distance_with_different_sizes() {
         // Arrange
-        let hash1 = ImageHash {
-            matrix: vec![vec![false, true, false], vec![true, false, false]],
-        };
+        let hash1 = ImageHash::new(vec![vec![false, true, false], vec![true, false, false]]);
 
-        let hash2 = ImageHash {
-            matrix: vec![vec![false, true], vec![true, false]],
-        };
+        let hash2 = ImageHash::new(vec![vec![false, true], vec![true, false]]);
 
         // Act
         let distance = hash1.distance(&hash2);

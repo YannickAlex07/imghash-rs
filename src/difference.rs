@@ -12,24 +12,23 @@ pub struct DifferenceHasher {
 
 impl ImageHasher for DifferenceHasher {
     fn hash_from_img(&self, img: &image::DynamicImage) -> ImageHash {
-        let converted = self.convert(img, self.width + 1, self.height, &self.color_space);
+        let converted = self.convert(img, self.width + 1, self.height, self.color_space);
 
         // we will compute the differences on this matrix
-        let compare_matrix: Vec<Vec<u8>> = converted
+        let compare_matrix: Box<[Box<[u8]>]> = converted
             .as_bytes()
-            .to_vec()
             .chunks((self.width + 1) as usize)
-            .map(|x| x.to_vec())
-            .collect();
+            .map(|x| x.to_vec().into_boxed_slice())
+            .collect::<Vec<_>>()
+            .into_boxed_slice();
 
-        // the results are stored in this matrix
-        let mut matrix: Vec<Vec<bool>> = vec![];
-        for row in &compare_matrix {
-            let r: Vec<bool> = row.windows(2).map(|window| window[0] < window[1]).collect();
-            matrix.push(r);
-        }
-
-        ImageHash::new(matrix)
+        ImageHash::from_bool_iter(
+            compare_matrix
+                .iter()
+                .flat_map(|row| row.windows(2).map(|window| window[0] < window[1])),
+            self.width,
+            self.height,
+        )
     }
 }
 

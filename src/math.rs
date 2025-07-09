@@ -1,33 +1,40 @@
-use std::vec;
-
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Copy, Default)]
 pub enum Axis {
+    #[default]
     Row,
     Column,
 }
 
-/// Computes the DCT 2 for a given slice of floats.
+/// Computes the DCT 2 for a given slice of floats in-place.
+///
 /// The implementation follows the SciPy implementation.
 /// https://docs.scipy.org/doc/scipy/reference/generated/scipy.fftpack.dct.html
 ///
 /// # Arguments
-/// * `input`: A reference to a slice of floats
-///
-/// # Returns
-/// * A vector with the transformed values
-pub fn dct2(input: &[f64]) -> Vec<f64> {
-    // we cannot compute the DCT for an empty input
-    if input.is_empty() {
-        return vec![];
+/// * `input`: A mutable reference to a slice of floats.
+/// * `skip`: The number of elements to skip between each DCT value.
+///           This is used to iterate the elements column-wise.
+pub fn dct2_in_place(input: &mut [f64], skip: usize, buf: &mut [f64]) {
+    if skip == 0 {
+        panic!("Skip value must be greater than 0");
     }
 
-    let n = input.len();
+    // we cannot compute the DCT for an empty input
+    if input.is_empty() {
+        return;
+    }
+
+    let n = (input.len() + skip - 1) / skip;
+
+    if n > buf.len() {
+        panic!("Buffer is too small for the DCT result");
+    }
 
     (0..n)
         .map(|k| {
             2 as f64
                 * input
-                    .iter()
+                    .chunks(skip)
                     .enumerate()
                     .map(|(i, x)| {
                         let numerator = std::f64::consts::PI * k as f64 * (2 * i + 1) as f64;
@@ -35,49 +42,50 @@ pub fn dct2(input: &[f64]) -> Vec<f64> {
 
                         let cosine = (numerator / denominator).cos();
 
-                        x * cosine
+                        x[0] * cosine
                     })
                     .sum::<f64>()
         })
-        .collect()
+        .enumerate()
+        .for_each(|(i, value)| buf[i] = value);
+
+    input
+        .chunks_mut(skip)
+        .zip(buf.iter().copied())
+        .for_each(|(x, value)| {
+            x[0] = value;
+        });
 }
 
-/// Computes the DCT 2 over a matrix. The axis controls if the DCT
-/// is computed over the columns or over each column.
+/// Computes the DCT 2 in-place over a matrix.
+/// The axis controls if the DCT is computed over the columns or over each column.
 ///
 /// # Arguments
 /// * `input`: A reference to a matrix of floats
+/// * `width`: The width of the matrix
 /// * `axis`: The axis over which to compute the DCT 2
-///
-/// # Returns
-/// * A matrix with the modified values
-pub fn dct2_over_matrix(input: &Vec<Vec<f64>>, axis: Axis) -> Vec<Vec<f64>> {
+pub fn dct2_over_matrix_in_place(input: &mut [f64], width: usize, axis: Axis) {
     // we cannot compute the DCT for an empty matrix
-    if input.is_empty() || input[0].is_empty() {
-        return input.clone();
+    if input.is_empty() || width == 0 {
+        return;
     }
 
-    let mut matrix = input.clone();
+    match axis {
+        Axis::Row => {
+            let buf = &mut vec![0.0; width];
+            input
+                .chunks_mut(width)
+                .for_each(|row| dct2_in_place(row, 1, buf))
+        }
+        Axis::Column => {
+            let buf = &mut vec![0.0; input.len() / width];
 
-    // transpose the matrix if we are computing the DCT over the columns
-    if axis == Axis::Column {
-        matrix = transpose(&input);
+            // Step each column of the matrix, skipping `width` elements
+            for n in 0..(input.len() / width) {
+                dct2_in_place(&mut input[n..], width, buf);
+            }
+        }
     }
-
-    // iterate and compute dct
-    let mut dct_matrix: Vec<Vec<f64>> = vec![];
-    for row in matrix {
-        let input = row.iter().map(|x| *x as f64).collect::<Vec<f64>>();
-        let dct = dct2(&input);
-
-        dct_matrix.push(dct);
-    }
-
-    if axis == Axis::Column {
-        return transpose(&dct_matrix);
-    }
-
-    dct_matrix
 }
 
 /// Computes the median for slice of float values.
@@ -88,12 +96,13 @@ pub fn dct2_over_matrix(input: &Vec<Vec<f64>>, axis: Axis) -> Vec<Vec<f64>> {
 /// # Returns
 /// * Returns a float that represents the median
 /// * Returns `None` if `input` is empty
-pub fn median(input: &[f64]) -> Option<f64> {
-    if input.is_empty() {
+pub fn median(input: impl IntoIterator<Item = f64>) -> Option<f64> {
+    let mut sorted = input.into_iter().collect::<Vec<_>>();
+
+    if sorted.is_empty() {
         return None;
     }
 
-    let mut sorted = input.to_vec();
     sorted.sort_by(|a, b| a.partial_cmp(b).unwrap());
 
     let mid = sorted.len() / 2;
@@ -104,27 +113,6 @@ pub fn median(input: &[f64]) -> Option<f64> {
     }
 }
 
-/// Transposes a matrix represented as a vector of vectors.
-///
-/// # Arguments
-/// * `input`: A reference to a matrix of floats
-///
-/// # Returns
-/// * A matrix with the transposed values
-pub fn transpose(input: &Vec<Vec<f64>>) -> Vec<Vec<f64>> {
-    let rows = input.len();
-    let cols = input[0].len();
-
-    let mut transposed = vec![vec![0.; rows]; cols];
-    for r in 0..rows {
-        for c in 0..cols {
-            transposed[c][r] = input[r][c].clone();
-        }
-    }
-
-    transposed
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -132,14 +120,15 @@ mod tests {
     #[test]
     fn test_dct2() {
         // Arrange
-        let input = vec![1., 2., 3., 4.];
+        let mut input = vec![1., 2., 3., 4.];
 
         // Act
-        let result = dct2(&input);
+        let buf = &mut vec![0.0; input.len()];
+        dct2_in_place(&mut input, 1, buf);
 
         // Assert
         assert_eq!(
-            result,
+            input,
             vec![
                 20.0,
                 -6.308644059797899,
@@ -152,56 +141,46 @@ mod tests {
     #[test]
     fn test_dct2_with_empty_input() {
         // Arrange
-        let input = vec![];
+        let mut input = vec![];
 
         // Act
-        let result = dct2(&input);
+        let buf = &mut vec![0.0; input.len()];
+        dct2_in_place(&mut input, 1, buf);
 
         // Assert
-        assert_eq!(result, vec![]);
+        assert_eq!(input, vec![]);
     }
 
     #[test]
     fn test_dct2_over_matrix_rows() {
         // Arrange
-        let input = vec![
-            vec![1., 2., 3., 4.],
-            vec![5., 6., 7., 8.],
-            vec![9., 10., 11., 12.],
-            vec![13., 14., 15., 16.],
+        let mut input = vec![
+            1., 2., 3., 4., 5., 6., 7., 8., 9., 10., 11., 12., 13., 14., 15., 16.,
         ];
 
         // Act
-        let result = dct2_over_matrix(&input, Axis::Row);
+        dct2_over_matrix_in_place(&mut input, 4, Axis::Row);
 
         // Assert
         assert_eq!(
-            result,
+            input,
             vec![
-                vec![
-                    20.0,
-                    -6.308644059797899,
-                    -1.7763568394002505e-15,
-                    -0.44834152916796777
-                ],
-                vec![
-                    52.0,
-                    -6.308644059797897,
-                    -3.552713678800501e-15,
-                    -0.44834152916797
-                ],
-                vec![
-                    84.0,
-                    -6.308644059797897,
-                    -7.105427357601002e-15,
-                    -0.44834152916797265
-                ],
-                vec![
-                    116.0,
-                    -6.308644059797899,
-                    -3.552713678800501e-15,
-                    -0.4483415291679762
-                ],
+                20.0,
+                -6.308644059797899,
+                -1.7763568394002505e-15,
+                -0.44834152916796777,
+                52.0,
+                -6.308644059797897,
+                -3.552713678800501e-15,
+                -0.44834152916797,
+                84.0,
+                -6.308644059797897,
+                -7.105427357601002e-15,
+                -0.44834152916797265,
+                116.0,
+                -6.308644059797899,
+                -3.552713678800501e-15,
+                -0.4483415291679762
             ]
         );
     }
@@ -209,39 +188,33 @@ mod tests {
     #[test]
     fn test_dct2_over_matrix_column() {
         // Arrange
-        let input = vec![
-            vec![1., 2., 3., 4.],
-            vec![5., 6., 7., 8.],
-            vec![9., 10., 11., 12.],
-            vec![13., 14., 15., 16.],
+        let mut input = vec![
+            1., 2., 3., 4., 5., 6., 7., 8., 9., 10., 11., 12., 13., 14., 15., 16.,
         ];
 
         // Act
-        let result = dct2_over_matrix(&input, Axis::Column);
+        dct2_over_matrix_in_place(&mut input, 4, Axis::Column);
 
         // Assert
         assert_eq!(
-            result,
+            input,
             vec![
-                vec![56., 64., 72., 80.,],
-                vec![
-                    -25.234576239191597,
-                    -25.234576239191597,
-                    -25.234576239191597,
-                    -25.234576239191597
-                ],
-                vec![
-                    -7.105427357601002e-15,
-                    -7.105427357601002e-15,
-                    -7.105427357601002e-15,
-                    -7.105427357601002e-15
-                ],
-                vec![
-                    -1.7933661166718693,
-                    -1.7933661166718693,
-                    -1.7933661166718693,
-                    -1.793366116671871
-                ]
+                56.,
+                64.,
+                72.,
+                80.,
+                -25.234576239191597,
+                -25.234576239191597,
+                -25.234576239191597,
+                -25.234576239191597,
+                -7.105427357601002e-15,
+                -7.105427357601002e-15,
+                -7.105427357601002e-15,
+                -7.105427357601002e-15,
+                -1.7933661166718693,
+                -1.7933661166718693,
+                -1.7933661166718693,
+                -1.793366116671871
             ]
         );
     }
@@ -249,25 +222,25 @@ mod tests {
     #[test]
     fn test_dct2_over_matrix_with_empty_rows() {
         // Arrange
-        let input = vec![vec![]];
+        let mut input = vec![];
 
         // Act
-        let result = dct2_over_matrix(&input, Axis::Row);
+        dct2_over_matrix_in_place(&mut input, 0, Axis::Row);
 
         // Assert
-        assert_eq!(result, input);
+        assert_eq!(input, vec![]);
     }
 
     #[test]
     fn test_dct2_over_matrix_with_empty_columns() {
         // Arrange
-        let input = vec![];
+        let mut input = vec![];
 
         // Act
-        let result = dct2_over_matrix(&input, Axis::Column);
+        dct2_over_matrix_in_place(&mut input, 0, Axis::Column);
 
         // Assert
-        assert_eq!(result, input);
+        assert_eq!(input, vec![]);
     }
 
     #[test]
@@ -276,7 +249,7 @@ mod tests {
         let input = vec![3., 2., 1., 4.];
 
         // Act
-        let result = median(&input);
+        let result = median(input);
 
         // Assert
         assert_eq!(result, Some(2.5));
@@ -288,7 +261,7 @@ mod tests {
         let input = vec![3., 4., 1., 2., 5.];
 
         // Act
-        let result = median(&input);
+        let result = median(input);
 
         // Assert
         assert_eq!(result, Some(3.));
@@ -300,24 +273,9 @@ mod tests {
         let input = vec![];
 
         // Act
-        let result = median(&input);
+        let result = median(input);
 
         // Assert
         assert_eq!(result, None);
-    }
-
-    #[test]
-    fn test_transpose() {
-        // Arrange
-        let input = vec![vec![1., 2., 3.], vec![4., 5., 6.], vec![7., 8., 9.]];
-
-        // Act
-        let result = transpose(&input);
-
-        // Assert
-        assert_eq!(
-            result,
-            vec![vec![1., 4., 7.], vec![2., 5., 8.], vec![3., 6., 9.]]
-        );
     }
 }

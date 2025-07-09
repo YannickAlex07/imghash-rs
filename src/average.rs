@@ -14,27 +14,19 @@ pub struct AverageHasher {
 
 impl ImageHasher for AverageHasher {
     fn hash_from_img(&self, img: &image::DynamicImage) -> ImageHash {
-        let converted = self.convert(img, self.width, self.height, &self.color_space);
-        let mean: usize = converted
+        let converted = self.convert(img, self.width, self.height, self.color_space);
+        let mean = converted
             .as_bytes()
             .to_vec()
             .iter()
             .fold(0, |acc, x| acc + *x as usize)
-            / (self.width * self.height) as usize;
+            / (self.width as usize * self.height as usize);
 
-        let mut bits = vec![false; (self.width * self.height) as usize];
-        for (i, p) in converted.as_bytes().to_vec().iter().enumerate() {
-            if *p as usize > mean {
-                bits[i] = true;
-            }
-        }
-
-        let matrix = bits
-            .chunks(self.width as usize)
-            .map(|x| x.to_vec())
-            .collect();
-
-        ImageHash::new(matrix)
+        ImageHash::from_bool_iter(
+            converted.as_bytes().iter().map(|&p| p as usize > mean),
+            self.width,
+            self.height,
+        )
     }
 }
 
