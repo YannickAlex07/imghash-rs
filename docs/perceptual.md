@@ -40,15 +40,35 @@ Lets look into each step into more detail and how this crate implements them.
 
 #### 1. Grayscaling & Resizing for DCT
 
-The first step is to grayscale and resize the image to a given size. By default this size is 8 x 8 pixels. However to get a better result we will multiply the size by some given `factor`. By default this factor is set to 4, meaning we will rescale the image to 32 x 32 pixels before we compute the DCT.
+The first step is to grayscale and resize the image to a given size. By default this size is 8 x 8 pixels.
 
-As with every algorithm, the scale is configurable and you can experiment with it to find the best possible size for your use case.
+> The size of the resized image is to determine the amount of detail that is captured in the hash.
+> A larger size captures more detail while a smaller size will be "courser," i.e. less sensitive to
+> fine changes in the image.
+
+To get a better result we multiply the size by a given `factor`.
+By default this factor is set to 4, meaning that we will rescale the image to 32 x 32 pixels before we compute the DCT.
+
+> This factor is used to determine how much image details is discarded for hashing.
+>
+> For the default factor of 4, for example, 3/4 (or 75%) of high-frequency information is discarded,
+> so the image hash is more robust against small, fine changes in the image.
+>
+> For a factor or 2, only 1/2 (or 50%) of high-frequency information is discarded, so the hash is more sensitive to fine changes.
+> 1/8 for a factor of 8, with the hash very resilient against fine changes, and so on.
+
+As with every algorithm, the scale is configurable and you can experiment with it to find the best
+possible image size and factor for your use case.
 
 #### 2. Compute DCT 2 over the Matrix
 
-Second step for calculating the DCT 2 for our matrix. We will do two passes here, first we will compute the DCT alongside each column and then again over each row.
+Second step for calculating the DCT 2 for our matrix. We will do two passes here, first we will
+compute the DCT alongside each column and then again over each row.
 
-The formular that we use for DCT 2 is the one used by SciPy:
+> DCT 2 is composable, meaning that we can compute it over the rows and then again over the columns
+> to get the final result.
+
+The formula that we use for DCT 2 is the one used by SciPy:
 
 $$
 y_k = 2\sum_{n=0}^{N-1} x_n\cos{\frac{\pi k (2 n + 1)}{2N}}
@@ -64,7 +84,7 @@ $$
 \end{bmatrix}
 $$
 
-After the first pass we will receive the following result (rounded to safe some space here):
+After the first pass we will receive the following result (rounded to save some space here):
 
 TODO: Update Matrix
 $$
@@ -89,6 +109,8 @@ $$
 #### 3. Crop & Compute Median
 
 After we computed our DCT matrix, we will need to crop it and then calculate the median for the cropped matrix.
+
+> Cropping is equivalent to removing high-frequency information in the DCT matrix (i.e. the parts cropped out).
 
 Essentially we just crop our upscaled matrix down to the specified size. So if we assume a target size of 2 x 2 (default is 8 x 8), the matrix
 
