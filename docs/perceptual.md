@@ -55,7 +55,7 @@ By default this factor is set to 4, meaning that we will rescale the image to 32
 > so the image hash is more robust against small, fine changes in the image.
 >
 > For a factor or 2, only 1/2 (or 50%) of high-frequency information is discarded, so the hash is more sensitive to fine changes.
-> 1/8 for a factor of 8, with the hash very resilient against fine changes, and so on.
+> 1/8 for a factor of 8, will make the hash very resilient against fine changes, and so on.
 
 As with every algorithm, the scale is configurable and you can experiment with it to find the best
 possible image size and factor for your use case.
