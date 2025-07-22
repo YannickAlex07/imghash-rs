@@ -56,7 +56,7 @@ pub fn average_hash(path: &Path) -> Result<ImageHash, ImageError> {
 
 /// Calculate the median hash for an image at the specified path. Uses the default
 /// width and height of 8 x 8 pixels. If you want to use something else please directly use
-/// the [`AverageHasher`] struct.
+/// the [`MedianHasher`] struct.
 ///
 /// # Arguments
 /// * `path`: A reference to the path of the image
@@ -156,7 +156,7 @@ mod tests {
         // Assert
         match hash {
             Ok(_) => panic!("should not be able to calculate hash for txt file"),
-            Err(_) => assert!(true),
+            Err(_) => {}
         }
     }
 
@@ -183,7 +183,7 @@ mod tests {
         // Assert
         match hash {
             Ok(_) => panic!("should not be able to calculate hash for txt file"),
-            Err(_) => assert!(true),
+            Err(_) => {}
         }
     }
 
@@ -210,7 +210,7 @@ mod tests {
         // Assert
         match hash {
             Ok(_) => panic!("should not be able to calculate hash for txt file"),
-            Err(_) => assert!(true),
+            Err(_) => {}
         }
     }
 
@@ -237,7 +237,7 @@ mod tests {
         // Assert
         match hash {
             Ok(_) => panic!("should not be able to calculate hash for txt file"),
-            Err(_) => assert!(true),
+            Err(_) => {}
         }
     }
 }
