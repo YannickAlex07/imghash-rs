@@ -1,6 +1,7 @@
 use average::AverageHasher;
 use difference::DifferenceHasher;
 use image::ImageError;
+use median::MedianHasher;
 use perceptual::PerceptualHasher;
 use std::path::Path;
 
@@ -53,6 +54,25 @@ pub fn average_hash(path: &Path) -> Result<ImageHash, ImageError> {
     hasher.hash_from_path(path)
 }
 
+/// Calculate the median hash for an image at the specified path. Uses the default
+/// width and height of 8 x 8 pixels. If you want to use something else please directly use
+/// the [`AverageHasher`] struct.
+///
+/// # Arguments
+/// * `path`: A reference to the path of the image
+///
+/// # Returns
+/// * An [`ImageHash`]-struct that can be encoded into a string representation
+/// * An [`ImageError`] if something went wrong while loading the image
+pub fn median_hash(path: &Path) -> Result<ImageHash, ImageError> {
+    // create the hasher
+    let hasher = MedianHasher {
+        ..Default::default()
+    };
+
+    hasher.hash_from_path(path)
+}
+
 /// Calculate the difference hash for an image at the specified path. Uses the default
 /// width and height of 8 x 8 pixels. If you want to use something else please directly use
 /// the [`DifferenceHasher`] struct.
@@ -94,6 +114,7 @@ pub fn perceptual_hash(path: &Path) -> Result<ImageHash, ImageError> {
 // public modules
 pub mod average;
 pub mod difference;
+pub mod median;
 pub mod perceptual;
 
 // private modules
@@ -131,6 +152,33 @@ mod tests {
 
         // Act
         let hash = average_hash(path);
+
+        // Assert
+        match hash {
+            Ok(_) => panic!("should not be able to calculate hash for txt file"),
+            Err(_) => assert!(true),
+        }
+    }
+
+    #[test]
+    fn test_median_hash() {
+        // Arrange
+        let path = Path::new(TEST_IMG);
+
+        // Act
+        let hash = median_hash(path);
+
+        // Assert
+        assert_eq!(hash.unwrap().encode(), "ffffff1e00000301")
+    }
+
+    #[test]
+    fn test_median_hash_with_txt_file() {
+        // Arrange
+        let path = Path::new(TXT_FILE);
+
+        // Act
+        let hash = median_hash(path);
 
         // Assert
         match hash {
