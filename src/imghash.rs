@@ -117,10 +117,11 @@ impl ImageHash {
 
         Ok(self
             .data
+            .as_raw_slice()
             .iter()
-            .zip(other.data.iter())
-            .filter(|(a, b)| a != b)
-            .count())
+            .zip(other.data.as_raw_slice().iter())
+            .map(|(a, b)| (a ^ b).count_ones() as usize)
+            .sum())
     }
 
     /// Encodes the bit matrix that represents the [`ImageHash`] into a hexadecimal string.
