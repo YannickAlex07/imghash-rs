@@ -12,11 +12,11 @@ pub enum ColorSpace {
 ///
 /// # Arguments
 /// * `img`: A reference to the image to convert
-/// * `space`: The color space to use for the conversion
+/// * `color_space`: The color space to use for the conversion
 ///
 /// # Returns
 /// * The converted dynamic image
-pub(crate) fn grayscale(img: &DynamicImage, color_space: ColorSpace) -> DynamicImage {
+fn grayscale(img: &DynamicImage, color_space: ColorSpace) -> DynamicImage {
     let mut buffer = GrayImage::new(img.width(), img.height());
 
     let coefficients: [f64; 3] = match color_space {
@@ -37,13 +37,14 @@ pub(crate) fn grayscale(img: &DynamicImage, color_space: ColorSpace) -> DynamicI
     DynamicImage::ImageLuma8(buffer)
 }
 
-/// Converts a given [`DynamicImage`] by conveting it to grayscale and then resizing it
+/// Converts a given [`DynamicImage`] by converting it to grayscale and then resizing it
 /// to the specified size.
 ///
 /// # Arguments
 /// * `img`: A reference to the image to convert
 /// * `width`: The final width of the rescaled image
 /// * `height`: The final height of the rescaled image
+/// * `color_space`: The color space to use for the conversion
 ///
 /// # Returns
 /// * The converted dynamic image
