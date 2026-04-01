@@ -15,9 +15,7 @@ pub enum Axis {
 /// * `skip`: The number of elements to skip between each DCT value.
 ///           This is used to iterate the elements column-wise.
 pub fn dct2_in_place(input: &mut [f64], skip: usize, buf: &mut [f64]) {
-    if skip == 0 {
-        panic!("Skip value must be greater than 0");
-    }
+    debug_assert!(skip > 0, "Skip value must be greater than 0");
 
     // we cannot compute the DCT for an empty input
     if input.is_empty() {
@@ -26,9 +24,7 @@ pub fn dct2_in_place(input: &mut [f64], skip: usize, buf: &mut [f64]) {
 
     let n = (input.len() + skip - 1) / skip;
 
-    if n > buf.len() {
-        panic!("Buffer is too small for the DCT result");
-    }
+    debug_assert!(n <= buf.len(), "Buffer is too small for the DCT result");
 
     (0..n)
         .map(|k| {

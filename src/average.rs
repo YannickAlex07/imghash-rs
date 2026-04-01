@@ -1,4 +1,4 @@
-use crate::{imageops::convert, ColorSpace, ImageHash, ImageHasher};
+use crate::{imageops::convert, ColorSpace, ImageHash, ImageHashError, ImageHasher};
 
 #[derive(Debug, Clone)]
 pub struct AverageHasher {
@@ -14,7 +14,7 @@ pub struct AverageHasher {
 }
 
 impl ImageHasher for AverageHasher {
-    fn hash_from_img(&self, img: &image::DynamicImage) -> ImageHash {
+    fn hash_from_img(&self, img: &image::DynamicImage) -> Result<ImageHash, ImageHashError> {
         let converted = convert(img, self.width, self.height, self.color_space);
         let mean = converted
             .as_bytes()
@@ -70,7 +70,8 @@ mod tests {
         let hash = hasher.hash_from_img(&img);
 
         // Assert
-        assert_eq!(hash.encode(), REC_601_HASH)
+        assert!(hash.is_ok());
+        assert_eq!(hash.unwrap().encode().unwrap(), REC_601_HASH)
     }
 
     #[test]
@@ -90,7 +91,8 @@ mod tests {
         let hash = hasher.hash_from_img(&img);
 
         // Assert
-        assert_eq!(hash.encode(), REC_709_HASH)
+        assert!(hash.is_ok());
+        assert_eq!(hash.unwrap().encode().unwrap(), REC_709_HASH)
     }
 
     #[test]
@@ -104,10 +106,8 @@ mod tests {
         let hash = hasher.hash_from_path(Path::new(TEST_IMG));
 
         // Assert
-        match hash {
-            Ok(hash) => assert_eq!(hash.encode(), REC_601_HASH),
-            Err(err) => panic!("could not read image: {:?}", err),
-        }
+        assert!(hash.is_ok());
+        assert_eq!(hash.unwrap().encode().unwrap(), REC_601_HASH)
     }
 
     #[test]
@@ -121,10 +121,7 @@ mod tests {
         let hash = hasher.hash_from_path(Path::new("./does/not/exist.png"));
 
         // Assert
-        match hash {
-            Ok(hash) => panic!("found hash for non-existing image: {:?}", hash),
-            Err(_) => (),
-        }
+        assert!(hash.is_err());
     }
 
     #[test]
@@ -138,9 +135,6 @@ mod tests {
         let hash = hasher.hash_from_path(Path::new(TXT_FILE));
 
         // Assert
-        match hash {
-            Ok(hash) => panic!("found hash for non-existing image: {:?}", hash),
-            Err(_) => (),
-        }
+        assert!(hash.is_err());
     }
 }

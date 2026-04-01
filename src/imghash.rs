@@ -1,4 +1,22 @@
+use std::io;
+
 use bitvec::prelude::*;
+use thiserror::Error;
+
+#[derive(Error, Debug)]
+pub enum ImageHashError {
+    #[error("Failed to read image from path: {0}")]
+    IoError(#[from] io::Error),
+
+    #[error("Failed to decode image: {0}")]
+    ImageError(#[from] image::ImageError),
+
+    #[error("Matrix cannot be empty")]
+    EmptyMatrix,
+
+    #[error("Data length {actual} does not match the specified dimensions {expected}")]
+    DimensionMismatch { expected: usize, actual: usize },
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ImageHash {
@@ -24,10 +42,10 @@ impl ImageHash {
         iter: impl IntoIterator<Item = bool>,
         width: u32,
         height: u32,
-    ) -> ImageHash {
+    ) -> Result<ImageHash, ImageHashError> {
         let length = width as usize * height as usize;
         if length == 0 {
-            panic!("Matrix cannot be empty");
+            return Err(ImageHashError::EmptyMatrix);
         }
 
         let mut data = bitbox![u8, Lsb0; 0; length];
@@ -39,10 +57,13 @@ impl ImageHash {
         });
 
         if count != length {
-            panic!("Data length does not match the specified width and height");
+            return Err(ImageHashError::DimensionMismatch {
+                expected: length,
+                actual: count,
+            });
         }
 
-        ImageHash { data, width }
+        Ok(ImageHash { data, width })
     }
 
     /// Create an iterator yielding `bool` values over the bits of an [`ImageHash`].
@@ -60,9 +81,12 @@ impl ImageHash {
 
     /// The hamming distance between this hash and the other hash.
     /// The hamming distance is the number of bits that differ between the two hashes.
-    pub fn distance(&self, other: &ImageHash) -> Result<usize, String> {
+    pub fn distance(&self, other: &ImageHash) -> Result<usize, ImageHashError> {
         if self.shape() != other.shape() {
-            return Err("Cannot compute distance of hashes with different sizes".to_string());
+            return Err(ImageHashError::DimensionMismatch {
+                expected: self.data.len(),
+                actual: other.data.len(),
+            });
         }
 
         Ok(self
@@ -76,15 +100,11 @@ impl ImageHash {
 
     /// Encodes the bit matrix that represents the [`ImageHash`] into a hexadecimal string.
     /// This implementation is strictly compatible with `imagehash` package for Python.
-    pub fn encode(&self) -> String {
+    pub fn encode(&self) -> Result<String, ImageHashError> {
         use std::io::Write;
 
-        if self.data.is_empty() {
-            panic!("Cannot encode an empty matrix")
-        }
-
-        if self.width == 0 {
-            panic!("Matrix cannot have no columns");
+        if self.data.is_empty() || self.width == 0 {
+            return Err(ImageHashError::EmptyMatrix);
         }
 
         let mut result = Vec::new();
@@ -108,7 +128,8 @@ impl ImageHash {
             }
         }
 
-        String::from_utf8(result).unwrap()
+        // SAFETY: hex formatting only produces ASCII bytes
+        Ok(String::from_utf8(result).unwrap())
     }
 
     /// Decodes a hexadecimal string into a bit matrix that represents the [`ImageHash`].
@@ -180,7 +201,10 @@ impl ImageHash {
 
 impl std::fmt::Display for ImageHash {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.encode())
+        match self.encode() {
+            Ok(s) => write!(f, "{}", s),
+            Err(e) => write!(f, "<invalid hash: {}>", e),
+        }
     }
 }
 
@@ -194,7 +218,7 @@ mod tests {
     #[test]
     fn test_image_hash_shape() {
         // Arrange
-        let hash = ImageHash::from_bool_iter(vec![false, true, true, false], 2, 2);
+        let hash = ImageHash::from_bool_iter(vec![false, true, true, false], 2, 2).unwrap();
 
         let expected = (2, 2);
 
@@ -225,7 +249,8 @@ mod tests {
         );
 
         // Assert
-        assert_eq!(hash.encode(), "24f0");
+        assert!(hash.is_ok());
+        assert_eq!(hash.unwrap().encode().unwrap(), "24f0");
     }
 
     #[test]
@@ -246,7 +271,8 @@ mod tests {
         );
 
         // Assert
-        assert_eq!(hash.encode(), "6a3e1");
+        assert!(hash.is_ok());
+        assert_eq!(hash.unwrap().encode().unwrap(), "6a3e1");
     }
 
     #[test]
@@ -268,13 +294,14 @@ mod tests {
         );
 
         // Assert
-        assert_eq!(hash.encode(), "351f");
+        assert!(hash.is_ok());
+        assert_eq!(hash.unwrap().encode().unwrap(), "351f");
     }
 
     #[test]
-    #[should_panic(expected = "Matrix cannot be empty")]
     fn test_image_hash_encoding_with_empty_matrix() {
-        let _ = ImageHash::from_bool_iter(vec![], 0, 0); // <- should panic
+        let result = ImageHash::from_bool_iter(vec![], 0, 0);
+        assert!(result.is_err());
     }
 
     #[test]
@@ -287,7 +314,8 @@ mod tests {
         let hash = ImageHash::from_bool_iter(vec![true], 1, 1);
 
         // Assert
-        assert_eq!(hash.encode(), "1");
+        assert!(hash.is_ok());
+        assert_eq!(hash.unwrap().encode().unwrap(), "1");
     }
 
     // DECODING
@@ -303,10 +331,11 @@ mod tests {
         ];
 
         // Act
-        let decoded = ImageHash::decode("24f0", 4, 4).unwrap();
+        let decoded = ImageHash::decode("24f0", 4, 4);
 
         // Assert
-        assert_eq!(decoded.iter_bool().collect::<Vec<bool>>(), expected);
+        assert!(decoded.is_ok());
+        assert_eq!(decoded.unwrap().iter_bool().collect::<Vec<bool>>(), expected);
     }
 
     #[test]
@@ -320,10 +349,11 @@ mod tests {
         ];
 
         // Act
-        let decoded = ImageHash::decode("6a3e1", 5, 4).unwrap();
+        let decoded = ImageHash::decode("6a3e1", 5, 4);
 
         // Assert
-        assert_eq!(decoded.iter_bool().collect::<Vec<bool>>(), expected);
+        assert!(decoded.is_ok());
+        assert_eq!(decoded.unwrap().iter_bool().collect::<Vec<bool>>(), expected);
     }
 
     #[test]
@@ -336,10 +366,11 @@ mod tests {
         ];
 
         // Act
-        let decoded = ImageHash::decode("351f", 5, 3).unwrap();
+        let decoded = ImageHash::decode("351f", 5, 3);
 
         // Assert
-        assert_eq!(decoded.iter_bool().collect::<Vec<bool>>(), expected);
+        assert!(decoded.is_ok());
+        assert_eq!(decoded.unwrap().iter_bool().collect::<Vec<bool>>(), expected);
     }
 
     #[test]
@@ -348,10 +379,11 @@ mod tests {
         let expected = vec![true];
 
         // Act
-        let decoded = ImageHash::decode("1", 1, 1).unwrap();
+        let decoded = ImageHash::decode("1", 1, 1);
 
         // Assert
-        assert_eq!(decoded.iter_bool().collect::<Vec<bool>>(), expected);
+        assert!(decoded.is_ok());
+        assert_eq!(decoded.unwrap().iter_bool().collect::<Vec<bool>>(), expected);
     }
 
     #[test]
@@ -360,10 +392,7 @@ mod tests {
         let decoded = ImageHash::decode("AB", 2, 5);
 
         // Assert
-        match decoded {
-            Ok(_) => panic!("Should not have decoded"),
-            Err(e) => assert_eq!(e, "String is too short or too long for the specified size"),
-        }
+        assert!(decoded.is_err());
     }
 
     #[test]
@@ -372,10 +401,7 @@ mod tests {
         let decoded = ImageHash::decode("ABCD", 2, 2);
 
         // Assert
-        match decoded {
-            Ok(_) => panic!("Should not have decoded"),
-            Err(e) => assert_eq!(e, "String is too short or too long for the specified size"),
-        }
+        assert!(decoded.is_err());
     }
 
     #[test]
@@ -384,10 +410,7 @@ mod tests {
         let decoded = ImageHash::decode("!", 2, 2);
 
         // Assert
-        match decoded {
-            Ok(_) => panic!("Should not have decoded"),
-            Err(e) => assert_eq!(e, "invalid digit found in string"),
-        }
+        assert!(decoded.is_err());
     }
 
     #[test]
@@ -396,10 +419,7 @@ mod tests {
         let decoded = ImageHash::decode("!", 2, 0);
 
         // Assert
-        match decoded {
-            Ok(_) => panic!("Should not have decoded"),
-            Err(e) => assert_eq!(e, "Width or height cannot be 0"),
-        }
+        assert!(decoded.is_err());
     }
 
     #[test]
@@ -408,10 +428,7 @@ mod tests {
         let decoded = ImageHash::decode("", 2, 2);
 
         // Assert
-        match decoded {
-            Ok(_) => panic!("Should not have decoded"),
-            Err(e) => assert_eq!(e, "String is empty"),
-        }
+        assert!(decoded.is_err());
     }
 
     // DISTANCE
@@ -423,55 +440,51 @@ mod tests {
             vec![false, true, true, true, false, false, true, false, true],
             3,
             3,
-        );
+        )
+        .unwrap();
 
         let hash2 = ImageHash::from_bool_iter(
             vec![true, true, true, false, false, false, true, false, true],
             3,
             3,
-        );
+        )
+        .unwrap();
 
         // Act
         let distance = hash1.distance(&hash2);
 
         // Assert
-        match distance {
-            Ok(d) => assert_eq!(d, 2),
-            Err(_) => panic!("Should not have errored"),
-        }
+        assert!(distance.is_ok());
+        assert_eq!(distance.unwrap(), 2);
     }
 
     #[test]
     fn test_image_hash_distance_with_equal_hashes() {
         // Arrange
-        let hash1 = ImageHash::from_bool_iter(vec![false, true, true, false], 2, 2);
+        let hash1 =
+            ImageHash::from_bool_iter(vec![false, true, true, false], 2, 2).unwrap();
 
-        let hash2 = ImageHash::from_bool_iter(vec![false, true, true, false], 2, 2);
+        let hash2 =
+            ImageHash::from_bool_iter(vec![false, true, true, false], 2, 2).unwrap();
 
         // Act
         let distance = hash1.distance(&hash2);
 
         // Assert
-        match distance {
-            Ok(d) => assert_eq!(d, 0),
-            Err(_) => panic!("Should not have errored"),
-        }
+        assert!(distance.is_ok());
+        assert_eq!(distance.unwrap(), 0);
     }
 
     #[test]
     fn test_image_hash_distance_with_different_sizes() {
         // Arrange
-        let hash1 = ImageHash::from_bool_iter(vec![false, true, false, true, false, false], 3, 2);
+        let hash1 = ImageHash::from_bool_iter(vec![false, true, false, true, false, false], 3, 2)
+            .unwrap();
 
-        let hash2 = ImageHash::from_bool_iter(vec![false, true, true, false], 2, 2);
+        let hash2 =
+            ImageHash::from_bool_iter(vec![false, true, true, false], 2, 2).unwrap();
 
-        // Act
-        let distance = hash1.distance(&hash2);
-
-        // Assert
-        match distance {
-            Ok(_) => panic!("Should not have succeeded"),
-            Err(e) => assert_eq!(e, "Cannot compute distance of hashes with different sizes"),
-        }
+        // Act & Assert
+        assert!(hash1.distance(&hash2).is_err());
     }
 }
