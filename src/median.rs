@@ -1,5 +1,6 @@
 use crate::{imageops::ImageOps, ColorSpace, ImageHash, ImageHasher};
 
+#[derive(Debug, Clone)]
 pub struct MedianHasher {
     /// The target width of the matrix
     pub width: u32,

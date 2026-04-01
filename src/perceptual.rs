@@ -4,6 +4,7 @@ use crate::{
     ColorSpace, ImageHash, ImageHasher,
 };
 
+#[derive(Debug, Clone)]
 pub struct PerceptualHasher {
     /// The target width of the matrix
     pub width: u32,
@@ -28,7 +29,7 @@ impl ImageHasher for PerceptualHasher {
         // convert the higher frequency image to a matrix of f64
         let mut dct_matrix = high_freq
             .as_bytes()
-            .into_iter()
+            .iter()
             .copied()
             .map(|v| v as f64)
             .collect::<Vec<_>>();

@@ -47,9 +47,7 @@ pub trait ImageHasher {
 /// * An [`ImageError`] if something went wrong while loading the image
 pub fn average_hash(path: &Path) -> Result<ImageHash, ImageError> {
     // create the hasher
-    let hasher = AverageHasher {
-        ..Default::default()
-    };
+    let hasher = AverageHasher::default();
 
     hasher.hash_from_path(path)
 }
@@ -66,9 +64,7 @@ pub fn average_hash(path: &Path) -> Result<ImageHash, ImageError> {
 /// * An [`ImageError`] if something went wrong while loading the image
 pub fn median_hash(path: &Path) -> Result<ImageHash, ImageError> {
     // create the hasher
-    let hasher = MedianHasher {
-        ..Default::default()
-    };
+    let hasher = MedianHasher::default();
 
     hasher.hash_from_path(path)
 }
@@ -85,9 +81,7 @@ pub fn median_hash(path: &Path) -> Result<ImageHash, ImageError> {
 /// * An [`ImageError`] if something went wrong while loading the image
 pub fn difference_hash(path: &Path) -> Result<ImageHash, ImageError> {
     // create the hasher
-    let hasher = DifferenceHasher {
-        ..Default::default()
-    };
+    let hasher = DifferenceHasher::default();
 
     hasher.hash_from_path(path)
 }
@@ -104,9 +98,7 @@ pub fn difference_hash(path: &Path) -> Result<ImageHash, ImageError> {
 /// * An [`ImageError`] if something went wrong while loading the image
 pub fn perceptual_hash(path: &Path) -> Result<ImageHash, ImageError> {
     // create the hasher
-    let hasher = PerceptualHasher {
-        ..Default::default()
-    };
+    let hasher = PerceptualHasher::default();
 
     hasher.hash_from_path(path)
 }
