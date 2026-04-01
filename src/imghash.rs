@@ -10,36 +10,6 @@ pub struct ImageHash {
 }
 
 impl ImageHash {
-    /// Create a new [`ImageHash`] from the specified bit matrix.
-    ///
-    /// # Arguments
-    /// * `matrix`: A 2D `Vec` of `bool` values in rows of columns.
-    ///             All rows must be non-empty and have the same length.
-    ///
-    /// # Returns
-    /// * The new [`ImageHash`].
-    pub fn new(matrix: Vec<Vec<bool>>) -> ImageHash {
-        if matrix.is_empty() || matrix.first().unwrap().is_empty() {
-            panic!("Matrix cannot be empty");
-        }
-
-        // Ensures that the matrix rows all have the same length.
-        // If not, this is a critical issue and likely a bug in the code
-        // that creates the hash -> therefore a panic here is appropriate
-        let width = matrix.first().unwrap().len();
-        let height = matrix.len();
-
-        if matrix.iter().any(|row| row.len() != width) {
-            panic!("All rows must have the same length");
-        }
-
-        Self::from_bool_iter(
-            matrix.into_iter().flat_map(Vec::into_iter),
-            width as u32,
-            height as u32,
-        )
-    }
-
     /// Create a new [`ImageHash`] from the specified bits stream.
     ///
     /// # Arguments
@@ -56,6 +26,9 @@ impl ImageHash {
         height: u32,
     ) -> ImageHash {
         let length = width as usize * height as usize;
+        if length == 0 {
+            panic!("Matrix cannot be empty");
+        }
 
         let mut data = bitbox![u8, Lsb0; 0; length];
         let mut count = 0;
@@ -78,27 +51,6 @@ impl ImageHash {
     /// * Bits from the [`ImageHash`], by column then by row.
     pub fn iter_bool(&self) -> impl Iterator<Item = bool> + '_ {
         self.data.iter().by_vals()
-    }
-
-    /// Returns a copy of the underlying matrix that represents the [`ImageHash`].
-    #[deprecated(
-        since = "1.5.0",
-        note = "This method is inefficient because it creates a new Vec<Vec<bool>>. Consider using `iter_bool` instead."
-    )]
-    pub fn matrix(&self) -> Vec<Vec<bool>> {
-        self.data
-            .chunks(self.width as usize)
-            .map(|chunk| chunk.iter().by_vals().collect::<Vec<bool>>())
-            .collect()
-    }
-
-    /// Flattens the bit matrix that represents the [`ImageHash`] into a single vector.
-    #[deprecated(
-        since = "1.5.0",
-        note = "This method is inefficient because it creates a new Vec<bool>. Consider using `iter_bool` instead."
-    )]
-    pub fn flatten(&self) -> Vec<bool> {
-        self.iter_bool().collect()
     }
 
     /// The shape of the matrix that represents the [`ImageHash`], in (number of rows, number of columns).
@@ -237,60 +189,12 @@ mod tests {
 
     use super::*;
 
-    // NEW
-
-    #[test]
-    fn test_image_hash_new_with_valid_matrix() {
-        // Arrange
-        let hash = ImageHash::new(vec![vec![false, true], vec![true, false]]);
-
-        // Assert
-        assert_eq!(
-            hash,
-            ImageHash::new(vec![vec![false, true], vec![true, false]],)
-        );
-    }
-
-    #[test]
-    #[should_panic]
-    fn test_image_hash_new_with_invalid_matrix() {
-        // should panic as the second row is longer than the first one
-        let _ = ImageHash::new(vec![vec![false, true], vec![true, false, false]]);
-    }
-
-    // MATRIX
-
-    #[test]
-    fn test_image_hash_get_matrix() {
-        // Arrange
-        let hash = ImageHash::new(vec![vec![false, true], vec![true, false]]);
-
-        // Assert
-        assert_eq!(hash.matrix(), vec![vec![false, true], vec![true, false]],);
-    }
-
-    // FLATTEN
-
-    #[test]
-    fn test_image_hash_flatten() {
-        // Arrange
-        let hash = ImageHash::new(vec![vec![false, true], vec![true, false]]);
-
-        let expected = vec![false, true, true, false];
-
-        // Act
-        let flattened = hash.flatten();
-
-        // Assert
-        assert_eq!(flattened, expected);
-    }
-
     // SHAPE
 
     #[test]
     fn test_image_hash_shape() {
         // Arrange
-        let hash = ImageHash::new(vec![vec![false, true], vec![true, false]]);
+        let hash = ImageHash::from_bool_iter(vec![false, true, true, false], 2, 2);
 
         let expected = (2, 2);
 
@@ -309,12 +213,16 @@ mod tests {
 
         // -> resulting bit str: 0010 0100 1111 0000
         // -> resulting hex str: 24F0
-        let hash = ImageHash::new(vec![
-            vec![false, false, true, false],
-            vec![false, true, false, false],
-            vec![true, true, true, true],
-            vec![false, false, false, false],
-        ]);
+        let hash = ImageHash::from_bool_iter(
+            vec![
+                false, false, true, false, //
+                false, true, false, false, //
+                true, true, true, true, //
+                false, false, false, false,
+            ],
+            4,
+            4,
+        );
 
         // Assert
         assert_eq!(hash.encode(), "24f0");
@@ -326,12 +234,16 @@ mod tests {
 
         // -> resulting bit str: 0110 1010 0011 1110 0001
         // -> resulting hex str: 6A3E1
-        let hash = ImageHash::new(vec![
-            vec![false, true, true, false, true],
-            vec![false, true, false, false, false],
-            vec![true, true, true, true, true],
-            vec![false, false, false, false, true],
-        ]);
+        let hash = ImageHash::from_bool_iter(
+            vec![
+                false, true, true, false, true, //
+                false, true, false, false, false, //
+                true, true, true, true, true, //
+                false, false, false, false, true,
+            ],
+            5,
+            4,
+        );
 
         // Assert
         assert_eq!(hash.encode(), "6a3e1");
@@ -345,11 +257,15 @@ mod tests {
         // it is divisible by 4
         // -> resulting bit str: 0011 0101 0001 1111
         // -> resulting hex str: 351F
-        let hash = ImageHash::new(vec![
-            vec![false, true, true, false, true],
-            vec![false, true, false, false, false],
-            vec![true, true, true, true, true],
-        ]);
+        let hash = ImageHash::from_bool_iter(
+            vec![
+                false, true, true, false, true, //
+                false, true, false, false, false, //
+                true, true, true, true, true, //
+            ],
+            5,
+            3,
+        );
 
         // Assert
         assert_eq!(hash.encode(), "351f");
@@ -358,7 +274,7 @@ mod tests {
     #[test]
     #[should_panic(expected = "Matrix cannot be empty")]
     fn test_image_hash_encoding_with_empty_matrix() {
-        let _ = ImageHash::new(vec![]); // <- should panic
+        let _ = ImageHash::from_bool_iter(vec![], 0, 0); // <- should panic
     }
 
     #[test]
@@ -368,7 +284,7 @@ mod tests {
         // should equal to 1 due to added padding
         // -> resulting bit str: 0001
         // -> resulting hex str: 1
-        let hash = ImageHash::new(vec![vec![true]]);
+        let hash = ImageHash::from_bool_iter(vec![true], 1, 1);
 
         // Assert
         assert_eq!(hash.encode(), "1");
@@ -380,62 +296,62 @@ mod tests {
     fn test_image_hash_decoding() {
         // Arrange
         let expected = vec![
-            vec![false, false, true, false],
-            vec![false, true, false, false],
-            vec![true, true, true, true],
-            vec![false, false, false, false],
+            false, false, true, false, //
+            false, true, false, false, //
+            true, true, true, true, //
+            false, false, false, false, //
         ];
 
         // Act
         let decoded = ImageHash::decode("24f0", 4, 4).unwrap();
 
         // Assert
-        assert_eq!(decoded.matrix(), expected);
+        assert_eq!(decoded.iter_bool().collect::<Vec<bool>>(), expected);
     }
 
     #[test]
     fn test_image_hash_decoding_with_non_square_matrix() {
         // Arrange
         let expected = vec![
-            vec![false, true, true, false, true],
-            vec![false, true, false, false, false],
-            vec![true, true, true, true, true],
-            vec![false, false, false, false, true],
+            false, true, true, false, true, //
+            false, true, false, false, false, //
+            true, true, true, true, true, //
+            false, false, false, false, true, //
         ];
 
         // Act
         let decoded = ImageHash::decode("6a3e1", 5, 4).unwrap();
 
         // Assert
-        assert_eq!(decoded.matrix(), expected);
+        assert_eq!(decoded.iter_bool().collect::<Vec<bool>>(), expected);
     }
 
     #[test]
     fn test_image_hash_decoding_with_uneven_total_bits() {
         // Arrange
         let expected = vec![
-            vec![false, true, true, false, true],
-            vec![false, true, false, false, false],
-            vec![true, true, true, true, true],
+            false, true, true, false, true, //
+            false, true, false, false, false, //
+            true, true, true, true, true, //
         ];
 
         // Act
         let decoded = ImageHash::decode("351f", 5, 3).unwrap();
 
         // Assert
-        assert_eq!(decoded.matrix(), expected);
+        assert_eq!(decoded.iter_bool().collect::<Vec<bool>>(), expected);
     }
 
     #[test]
     fn test_image_hash_decoding_with_single_bit() {
         // Arrange
-        let expected = vec![vec![true]];
+        let expected = vec![true];
 
         // Act
         let decoded = ImageHash::decode("1", 1, 1).unwrap();
 
         // Assert
-        assert_eq!(decoded.matrix(), expected);
+        assert_eq!(decoded.iter_bool().collect::<Vec<bool>>(), expected);
     }
 
     #[test]
@@ -503,9 +419,17 @@ mod tests {
     #[test]
     fn test_image_hash_distance_with_unequal_hashes() {
         // Arrange
-        let hash1 = ImageHash::new(vec![vec![false, true, true], vec![true, false, false]]);
+        let hash1 = ImageHash::from_bool_iter(
+            vec![false, true, true, true, false, false, true, false, true],
+            3,
+            3,
+        );
 
-        let hash2 = ImageHash::new(vec![vec![true, true, true], vec![false, false, false]]);
+        let hash2 = ImageHash::from_bool_iter(
+            vec![true, true, true, false, false, false, true, false, true],
+            3,
+            3,
+        );
 
         // Act
         let distance = hash1.distance(&hash2);
@@ -520,9 +444,9 @@ mod tests {
     #[test]
     fn test_image_hash_distance_with_equal_hashes() {
         // Arrange
-        let hash1 = ImageHash::new(vec![vec![false, true], vec![true, false]]);
+        let hash1 = ImageHash::from_bool_iter(vec![false, true, true, false], 2, 2);
 
-        let hash2 = ImageHash::new(vec![vec![false, true], vec![true, false]]);
+        let hash2 = ImageHash::from_bool_iter(vec![false, true, true, false], 2, 2);
 
         // Act
         let distance = hash1.distance(&hash2);
@@ -537,9 +461,9 @@ mod tests {
     #[test]
     fn test_image_hash_distance_with_different_sizes() {
         // Arrange
-        let hash1 = ImageHash::new(vec![vec![false, true, false], vec![true, false, false]]);
+        let hash1 = ImageHash::from_bool_iter(vec![false, true, false, true, false, false], 3, 2);
 
-        let hash2 = ImageHash::new(vec![vec![false, true], vec![true, false]]);
+        let hash2 = ImageHash::from_bool_iter(vec![false, true, true, false], 2, 2);
 
         // Act
         let distance = hash1.distance(&hash2);
