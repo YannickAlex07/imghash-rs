@@ -499,9 +499,9 @@ mod tests {
     #[test]
     fn test_image_hash_distance_with_unequal_hashes() {
         // Arrange
-        let hash1 = ImageHash::new(vec![vec![false, true], vec![true, false]]);
+        let hash1 = ImageHash::new(vec![vec![false, true, true], vec![true, false, false]]);
 
-        let hash2 = ImageHash::new(vec![vec![true, true], vec![false, false]]);
+        let hash2 = ImageHash::new(vec![vec![true, true, true], vec![false, false, false]]);
 
         // Act
         let distance = hash1.distance(&hash2);
