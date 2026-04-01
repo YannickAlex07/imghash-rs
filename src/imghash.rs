@@ -1,6 +1,6 @@
 use bitvec::prelude::*;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ImageHash {
     // The internal bit-vector stored in LSB order.
     data: BitBox<u8, Lsb0>,
@@ -69,8 +69,6 @@ impl ImageHash {
             panic!("Data length does not match the specified width and height");
         }
 
-        data.fill_uninitialized(false);
-
         ImageHash { data, width }
     }
 
@@ -129,9 +127,10 @@ impl ImageHash {
     pub fn encode(&self) -> String {
         use std::io::Write;
 
-        if self.data.len() == 0 {
+        if self.data.is_empty() {
             panic!("Cannot encode an empty matrix")
         }
+
         if self.width == 0 {
             panic!("Matrix cannot have no columns");
         }
@@ -144,10 +143,9 @@ impl ImageHash {
         let nibbles = (length + 3) / 4;
         let odd = nibbles % 2 == 1;
 
-        let mut buffer = BitBox::<u8, Msb0>::from_iter(
+        let buffer = BitBox::<u8, Msb0>::from_iter(
             std::iter::repeat_n(false, padding).chain(self.iter_bool()),
         );
-        buffer.fill_uninitialized(false);
 
         for byte in buffer.as_raw_slice().iter() {
             // Skip the leading '0' if the number of nibbles is odd
@@ -184,7 +182,7 @@ impl ImageHash {
         }
 
         // validate that s is a valid string
-        if s.len() == 0 {
+        if s.is_empty() {
             return Err("String is empty".to_string());
         }
 
@@ -225,6 +223,12 @@ impl ImageHash {
             BitBox::<u8, Lsb0>::from_iter(data.view_bits::<Msb0>()[padding..].iter().by_vals());
 
         Ok(ImageHash { data, width })
+    }
+}
+
+impl std::fmt::Display for ImageHash {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.encode())
     }
 }
 

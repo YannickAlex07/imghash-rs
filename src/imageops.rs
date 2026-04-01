@@ -20,11 +20,10 @@ pub trait ImageOps {
     fn grayscale(&self, img: &DynamicImage, color_space: ColorSpace) -> DynamicImage {
         let mut buffer = GrayImage::new(img.width(), img.height());
 
-        let coefficients: [f64; 3];
-        match color_space {
-            ColorSpace::REC709 => coefficients = [0.2126, 0.7152, 0.0722],
-            ColorSpace::REC601 => coefficients = [0.299, 0.587, 0.114],
-        }
+        let coefficients: [f64; 3] = match color_space {
+            ColorSpace::REC709 => [0.2126, 0.7152, 0.0722],
+            ColorSpace::REC601 => [0.299, 0.587, 0.114],
+        };
 
         buffer.par_enumerate_pixels_mut().for_each(|(x, y, pixel)| {
             let [r, g, b, _] = img.get_pixel(x, y).0;
