@@ -1,5 +1,5 @@
 use crate::{
-    imageops::ImageOps,
+    imageops::convert,
     math::{dct2_over_matrix_in_place, median, Axis},
     ColorSpace, ImageHash, ImageHasher,
 };
@@ -24,7 +24,7 @@ impl ImageHasher for PerceptualHasher {
         let width = self.width * self.factor;
         let height = self.height * self.factor;
 
-        let high_freq = self.convert(img, width, height, self.color_space);
+        let high_freq = convert(img, width, height, self.color_space);
 
         // convert the higher frequency image to a matrix of f64
         let mut dct_matrix = high_freq
@@ -67,8 +67,6 @@ impl Default for PerceptualHasher {
         }
     }
 }
-
-impl ImageOps for PerceptualHasher {}
 
 #[cfg(test)]
 mod tests {

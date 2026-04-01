@@ -1,4 +1,4 @@
-use crate::{imageops::ImageOps, ColorSpace, ImageHash, ImageHasher};
+use crate::{imageops::convert, ColorSpace, ImageHash, ImageHasher};
 
 #[derive(Debug, Clone)]
 pub struct MedianHasher {
@@ -15,7 +15,7 @@ pub struct MedianHasher {
 
 impl ImageHasher for MedianHasher {
     fn hash_from_img(&self, img: &image::DynamicImage) -> ImageHash {
-        let converted = self.convert(img, self.width, self.height, self.color_space);
+        let converted = convert(img, self.width, self.height, self.color_space);
 
         let mut values: Vec<u8> = converted.as_bytes().to_vec();
 
@@ -39,8 +39,6 @@ impl Default for MedianHasher {
         }
     }
 }
-
-impl ImageOps for MedianHasher {}
 
 #[cfg(test)]
 mod tests {

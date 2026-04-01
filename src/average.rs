@@ -1,4 +1,4 @@
-use crate::{imageops::ImageOps, ColorSpace, ImageHash, ImageHasher};
+use crate::{imageops::convert, ColorSpace, ImageHash, ImageHasher};
 
 #[derive(Debug, Clone)]
 pub struct AverageHasher {
@@ -15,7 +15,7 @@ pub struct AverageHasher {
 
 impl ImageHasher for AverageHasher {
     fn hash_from_img(&self, img: &image::DynamicImage) -> ImageHash {
-        let converted = self.convert(img, self.width, self.height, self.color_space);
+        let converted = convert(img, self.width, self.height, self.color_space);
         let mean = converted
             .as_bytes()
             .iter()
@@ -39,8 +39,6 @@ impl Default for AverageHasher {
         }
     }
 }
-
-impl ImageOps for AverageHasher {}
 
 #[cfg(test)]
 mod tests {
