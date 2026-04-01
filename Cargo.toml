@@ -12,6 +12,7 @@ authors = ["Yannick Alexander"]
 repository = "https://github.com/YannickAlex07/imghash-rs"
 
 edition = "2021"
+rust-version = "1.85.1"
 
 [dependencies]
 image = { version = "0.25.10", features = ["rayon"] }
