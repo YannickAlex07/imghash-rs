@@ -117,10 +117,11 @@ impl ImageHash {
 
         Ok(self
             .data
+            .as_raw_slice()
             .iter()
-            .zip(other.data.iter())
-            .filter(|(a, b)| a != b)
-            .count())
+            .zip(other.data.as_raw_slice().iter())
+            .map(|(a, b)| (a ^ b).count_ones() as usize)
+            .sum())
     }
 
     /// Encodes the bit matrix that represents the [`ImageHash`] into a hexadecimal string.
@@ -498,9 +499,9 @@ mod tests {
     #[test]
     fn test_image_hash_distance_with_unequal_hashes() {
         // Arrange
-        let hash1 = ImageHash::new(vec![vec![false, true], vec![true, false]]);
+        let hash1 = ImageHash::new(vec![vec![false, true, true], vec![true, false, false]]);
 
-        let hash2 = ImageHash::new(vec![vec![true, true], vec![false, false]]);
+        let hash2 = ImageHash::new(vec![vec![true, true, true], vec![false, false, false]]);
 
         // Act
         let distance = hash1.distance(&hash2);
