@@ -1,4 +1,4 @@
-use crate::{imageops::ImageOps, ColorSpace, ImageHash, ImageHasher};
+use crate::{imageops::convert, ColorSpace, ImageHash, ImageHasher};
 
 #[derive(Debug, Clone)]
 pub struct DifferenceHasher {
@@ -13,7 +13,7 @@ pub struct DifferenceHasher {
 
 impl ImageHasher for DifferenceHasher {
     fn hash_from_img(&self, img: &image::DynamicImage) -> ImageHash {
-        let converted = self.convert(img, self.width + 1, self.height, self.color_space);
+        let converted = convert(img, self.width + 1, self.height, self.color_space);
 
         // we will compute the differences on this matrix
         let compare_matrix: Box<[Box<[u8]>]> = converted
@@ -42,8 +42,6 @@ impl Default for DifferenceHasher {
         }
     }
 }
-
-impl ImageOps for DifferenceHasher {}
 
 #[cfg(test)]
 mod tests {
