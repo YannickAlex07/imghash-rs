@@ -14,11 +14,7 @@ pub struct MedianHasher {
 }
 
 impl MedianHasher {
-    pub fn new(
-        width: u32,
-        height: u32,
-        color_space: ColorSpace,
-    ) -> Result<Self, ImageHashError> {
+    pub fn new(width: u32, height: u32, color_space: ColorSpace) -> Result<Self, ImageHashError> {
         if width == 0 || height == 0 {
             return Err(ImageHashError::EmptyMatrix);
         }
