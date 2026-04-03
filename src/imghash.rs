@@ -479,11 +479,7 @@ mod tests {
     #[test]
     fn test_image_hash_from_bool_iter_with_too_many_elements() {
         // Arrange: 2x2 = 4 expected, but we supply 6
-        let result = ImageHash::from_bool_iter(
-            vec![true, false, true, false, true, true],
-            2,
-            2,
-        );
+        let result = ImageHash::from_bool_iter(vec![true, false, true, false, true, true], 2, 2);
 
         // Assert
         assert!(result.is_err());
@@ -559,11 +555,7 @@ mod tests {
     #[test]
     fn test_image_hash_from_bool_iter_with_too_few_elements() {
         // Arrange: 3x2 = 6 expected, but we supply 4
-        let result = ImageHash::from_bool_iter(
-            vec![true, false, true, false],
-            3,
-            2,
-        );
+        let result = ImageHash::from_bool_iter(vec![true, false, true, false], 3, 2);
 
         // Assert
         assert!(result.is_err());
@@ -584,9 +576,7 @@ mod tests {
         // Arrange
         let original = ImageHash::from_bool_iter(
             vec![
-                false, false, true, false,
-                false, true, false, false,
-                true, true, true, true,
+                false, false, true, false, false, true, false, false, true, true, true, true,
                 false, false, false, false,
             ],
             4,
@@ -607,10 +597,8 @@ mod tests {
         // Arrange
         let original = ImageHash::from_bool_iter(
             vec![
-                false, true, true, false, true,
-                false, true, false, false, false,
-                true, true, true, true, true,
-                false, false, false, false, true,
+                false, true, true, false, true, false, true, false, false, false, true, true, true,
+                true, true, false, false, false, false, true,
             ],
             5,
             4,
@@ -630,9 +618,8 @@ mod tests {
         // Arrange: 5x3 = 15 bits (not divisible by 4 or 8)
         let original = ImageHash::from_bool_iter(
             vec![
-                false, true, true, false, true,
-                false, true, false, false, false,
-                true, true, true, true, true,
+                false, true, true, false, true, false, true, false, false, false, true, true, true,
+                true, true,
             ],
             5,
             3,
@@ -676,19 +663,9 @@ mod tests {
     #[test]
     fn test_image_hash_distance_all_bits_differ() {
         // Arrange: all true vs all false => distance = 4
-        let hash1 = ImageHash::from_bool_iter(
-            vec![true, true, true, true],
-            2,
-            2,
-        )
-        .unwrap();
+        let hash1 = ImageHash::from_bool_iter(vec![true, true, true, true], 2, 2).unwrap();
 
-        let hash2 = ImageHash::from_bool_iter(
-            vec![false, false, false, false],
-            2,
-            2,
-        )
-        .unwrap();
+        let hash2 = ImageHash::from_bool_iter(vec![false, false, false, false], 2, 2).unwrap();
 
         // Act
         let distance = hash1.distance(&hash2).unwrap();
@@ -704,9 +681,7 @@ mod tests {
         // Arrange
         let hash = ImageHash::from_bool_iter(
             vec![
-                false, false, true, false,
-                false, true, false, false,
-                true, true, true, true,
+                false, false, true, false, false, true, false, false, true, true, true, true,
                 false, false, false, false,
             ],
             4,
