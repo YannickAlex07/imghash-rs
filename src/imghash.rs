@@ -534,14 +534,22 @@ mod tests {
     fn test_image_hash_distance_with_unequal_hashes() {
         // Arrange
         let hash1 = ImageHash::from_bool_iter(
-            vec![false, true, true, true, false, false, true, false, true],
+            vec![
+                false, true, true, //
+                true, false, false, //
+                true, false, true,
+            ],
             3,
             3,
         )
         .unwrap();
 
         let hash2 = ImageHash::from_bool_iter(
-            vec![true, true, true, false, false, false, true, false, true],
+            vec![
+                true, true, true, //
+                false, false, false, //
+                true, false, true,
+            ],
             3,
             3,
         )
@@ -594,7 +602,9 @@ mod tests {
         // Arrange
         let original = ImageHash::from_bool_iter(
             vec![
-                false, false, true, false, false, true, false, false, true, true, true, true,
+                false, false, true, false, //
+                false, true, false, false, //
+                true, true, true, true, //
                 false, false, false, false,
             ],
             4,
@@ -615,8 +625,10 @@ mod tests {
         // Arrange
         let original = ImageHash::from_bool_iter(
             vec![
-                false, true, true, false, true, false, true, false, false, false, true, true, true,
-                true, true, false, false, false, false, true,
+                false, true, true, false, true, //
+                false, true, false, false, false, //
+                true, true, true, true, true, //
+                false, false, false, false, true,
             ],
             5,
             4,
@@ -636,8 +648,9 @@ mod tests {
         // Arrange: 5x3 = 15 bits (not divisible by 4 or 8)
         let original = ImageHash::from_bool_iter(
             vec![
-                false, true, true, false, true, false, true, false, false, false, true, true, true,
-                true, true,
+                false, true, true, false, true, //
+                false, true, false, false, false, //
+                true, true, true, true, true,
             ],
             5,
             3,
@@ -658,14 +671,22 @@ mod tests {
     fn test_image_hash_distance_is_symmetric() {
         // Arrange
         let hash1 = ImageHash::from_bool_iter(
-            vec![false, true, true, true, false, false, true, false, true],
+            vec![
+                false, true, true, //
+                true, false, false, //
+                true, false, true,
+            ],
             3,
             3,
         )
         .unwrap();
 
         let hash2 = ImageHash::from_bool_iter(
-            vec![true, true, true, false, false, false, true, false, true],
+            vec![
+                true, true, true, //
+                false, false, false, //
+                true, false, true,
+            ],
             3,
             3,
         )
@@ -699,7 +720,9 @@ mod tests {
         // Arrange
         let hash = ImageHash::from_bool_iter(
             vec![
-                false, false, true, false, false, true, false, false, true, true, true, true,
+                false, false, true, false, //
+                false, true, false, false, //
+                true, true, true, true, //
                 false, false, false, false,
             ],
             4,
