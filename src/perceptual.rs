@@ -12,8 +12,8 @@ pub struct PerceptualHasher {
     /// The target height of the matrix
     height: u8,
 
-    /// The factor for the DCT matrix. We will rescale the image to (width * height) * factor
-    /// before we calculate the DCT on it.
+    /// The factor for the DCT matrix. We will rescale the image to
+    /// (width * factor, height * factor) before we calculate the DCT on it.
     factor: u8,
 
     /// The color space which will be used for grayscaling.
