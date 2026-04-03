@@ -7,14 +7,14 @@ use crate::{
 #[derive(Debug, Clone)]
 pub struct PerceptualHasher {
     /// The target width of the matrix
-    width: u32,
+    width: u8,
 
     /// The target height of the matrix
-    height: u32,
+    height: u8,
 
     /// The factor for the DCT matrix. We will rescale the image to (width * height) * factor
     /// before we calculate the DCT on it.
-    factor: u32,
+    factor: u8,
 
     /// The color space which will be used for grayscaling.
     /// Default is Rec. 601
@@ -23,9 +23,9 @@ pub struct PerceptualHasher {
 
 impl PerceptualHasher {
     pub fn new(
-        width: u32,
-        height: u32,
-        factor: u32,
+        width: u8,
+        height: u8,
+        factor: u8,
         color_space: ColorSpace,
     ) -> Result<Self, ImageHashError> {
         if width == 0 || height == 0 || factor == 0 {
@@ -40,15 +40,15 @@ impl PerceptualHasher {
         })
     }
 
-    pub fn width(&self) -> u32 {
+    pub fn width(&self) -> u8 {
         self.width
     }
 
-    pub fn height(&self) -> u32 {
+    pub fn height(&self) -> u8 {
         self.height
     }
 
-    pub fn factor(&self) -> u32 {
+    pub fn factor(&self) -> u8 {
         self.factor
     }
 
@@ -63,8 +63,8 @@ impl ImageHasher for PerceptualHasher {
             return Err(ImageHashError::EmptyMatrix);
         }
 
-        let width = self.width * self.factor;
-        let height = self.height * self.factor;
+        let width = self.width as u32 * self.factor as u32;
+        let height = self.height as u32 * self.factor as u32;
 
         let high_freq = convert(img, width, height, self.color_space);
 
@@ -93,8 +93,8 @@ impl ImageHasher for PerceptualHasher {
 
         ImageHash::from_bool_iter(
             scaled_matrix.into_iter().map(|pixel| pixel > median),
-            self.width,
-            self.height,
+            self.width as u32,
+            self.height as u32,
         )
     }
 }

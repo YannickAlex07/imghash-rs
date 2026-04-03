@@ -3,10 +3,10 @@ use crate::{imageops::convert, ColorSpace, ImageHash, ImageHashError, ImageHashe
 #[derive(Debug, Clone)]
 pub struct AverageHasher {
     /// The target width of the matrix
-    width: u32,
+    width: u8,
 
     /// The target height of the matrix
-    height: u32,
+    height: u8,
 
     /// The color space which will be used for grayscaling.
     /// Default is Rec. 601
@@ -14,7 +14,7 @@ pub struct AverageHasher {
 }
 
 impl AverageHasher {
-    pub fn new(width: u32, height: u32, color_space: ColorSpace) -> Result<Self, ImageHashError> {
+    pub fn new(width: u8, height: u8, color_space: ColorSpace) -> Result<Self, ImageHashError> {
         if width == 0 || height == 0 {
             return Err(ImageHashError::EmptyMatrix);
         }
@@ -26,11 +26,11 @@ impl AverageHasher {
         })
     }
 
-    pub fn width(&self) -> u32 {
+    pub fn width(&self) -> u8 {
         self.width
     }
 
-    pub fn height(&self) -> u32 {
+    pub fn height(&self) -> u8 {
         self.height
     }
 
@@ -45,17 +45,20 @@ impl ImageHasher for AverageHasher {
             return Err(ImageHashError::EmptyMatrix);
         }
 
-        let converted = convert(img, self.width, self.height, self.color_space);
+        let width = self.width as u32;
+        let height = self.height as u32;
+
+        let converted = convert(img, width, height, self.color_space);
         let mean = converted
             .as_bytes()
             .iter()
             .fold(0, |acc, x| acc + *x as usize)
-            / (self.width as usize * self.height as usize);
+            / (width as usize * height as usize);
 
         ImageHash::from_bool_iter(
             converted.as_bytes().iter().map(|&p| p as usize > mean),
-            self.width,
-            self.height,
+            width,
+            height,
         )
     }
 }

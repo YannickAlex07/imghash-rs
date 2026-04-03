@@ -3,10 +3,10 @@ use crate::{imageops::convert, ColorSpace, ImageHash, ImageHashError, ImageHashe
 #[derive(Debug, Clone)]
 pub struct DifferenceHasher {
     /// The target width of the matrix
-    width: u32,
+    width: u8,
 
     /// The target height of the matrix
-    height: u32,
+    height: u8,
 
     /// The color space which will be used for grayscaling.
     /// Default is Rec. 601
@@ -14,7 +14,7 @@ pub struct DifferenceHasher {
 }
 
 impl DifferenceHasher {
-    pub fn new(width: u32, height: u32, color_space: ColorSpace) -> Result<Self, ImageHashError> {
+    pub fn new(width: u8, height: u8, color_space: ColorSpace) -> Result<Self, ImageHashError> {
         if width == 0 || height == 0 {
             return Err(ImageHashError::EmptyMatrix);
         }
@@ -26,11 +26,11 @@ impl DifferenceHasher {
         })
     }
 
-    pub fn width(&self) -> u32 {
+    pub fn width(&self) -> u8 {
         self.width
     }
 
-    pub fn height(&self) -> u32 {
+    pub fn height(&self) -> u8 {
         self.height
     }
 
@@ -45,12 +45,15 @@ impl ImageHasher for DifferenceHasher {
             return Err(ImageHashError::EmptyMatrix);
         }
 
-        let converted = convert(img, self.width + 1, self.height, self.color_space);
+        let width = self.width as u32;
+        let height = self.height as u32;
+
+        let converted = convert(img, width + 1, height, self.color_space);
 
         // we will compute the differences on this matrix
         let compare_matrix: Box<[Box<[u8]>]> = converted
             .as_bytes()
-            .chunks((self.width + 1) as usize)
+            .chunks((width + 1) as usize)
             .map(|x| x.to_vec().into_boxed_slice())
             .collect::<Vec<_>>()
             .into_boxed_slice();
@@ -59,8 +62,8 @@ impl ImageHasher for DifferenceHasher {
             compare_matrix
                 .iter()
                 .flat_map(|row| row.windows(2).map(|window| window[0] < window[1])),
-            self.width,
-            self.height,
+            width,
+            height,
         )
     }
 }
