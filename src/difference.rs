@@ -3,12 +3,40 @@ use crate::{imageops::convert, ColorSpace, ImageHash, ImageHashError, ImageHashe
 #[derive(Debug, Clone)]
 pub struct DifferenceHasher {
     /// The target width of the matrix
-    pub width: u32,
+    width: u8,
 
     /// The target height of the matrix
-    pub height: u32,
+    height: u8,
 
-    pub color_space: ColorSpace,
+    /// The color space which will be used for grayscaling.
+    /// Default is Rec. 601
+    color_space: ColorSpace,
+}
+
+impl DifferenceHasher {
+    pub fn new(width: u8, height: u8, color_space: ColorSpace) -> Result<Self, ImageHashError> {
+        if width == 0 || height == 0 {
+            return Err(ImageHashError::EmptyMatrix);
+        }
+
+        Ok(Self {
+            width,
+            height,
+            color_space,
+        })
+    }
+
+    pub fn width(&self) -> u8 {
+        self.width
+    }
+
+    pub fn height(&self) -> u8 {
+        self.height
+    }
+
+    pub fn color_space(&self) -> ColorSpace {
+        self.color_space
+    }
 }
 
 impl ImageHasher for DifferenceHasher {
@@ -17,12 +45,15 @@ impl ImageHasher for DifferenceHasher {
             return Err(ImageHashError::EmptyMatrix);
         }
 
-        let converted = convert(img, self.width + 1, self.height, self.color_space);
+        let width = self.width as u32;
+        let height = self.height as u32;
+
+        let converted = convert(img, width + 1, height, self.color_space);
 
         // we will compute the differences on this matrix
         let compare_matrix: Box<[Box<[u8]>]> = converted
             .as_bytes()
-            .chunks((self.width + 1) as usize)
+            .chunks((width + 1) as usize)
             .map(|x| x.to_vec().into_boxed_slice())
             .collect::<Vec<_>>()
             .into_boxed_slice();
@@ -31,8 +62,8 @@ impl ImageHasher for DifferenceHasher {
             compare_matrix
                 .iter()
                 .flat_map(|row| row.windows(2).map(|window| window[0] < window[1])),
-            self.width,
-            self.height,
+            width,
+            height,
         )
     }
 }
@@ -62,6 +93,28 @@ mod tests {
     const REC_709_HASH: &str = "c499717ed9ea0627";
 
     #[test]
+    fn test_new_with_zero_width() {
+        let result = DifferenceHasher::new(0, 8, ColorSpace::REC601);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_new_with_zero_height() {
+        let result = DifferenceHasher::new(8, 0, ColorSpace::REC601);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_new_with_valid_dimensions() {
+        let result = DifferenceHasher::new(8, 8, ColorSpace::REC601);
+        assert!(result.is_ok());
+        let hasher = result.unwrap();
+        assert_eq!(hasher.width(), 8);
+        assert_eq!(hasher.height(), 8);
+        assert_eq!(hasher.color_space(), ColorSpace::REC601);
+    }
+
+    #[test]
     fn test_difference_hash_from_img() {
         // Arrange
         let img = ImageReader::open(Path::new(TEST_IMG))
@@ -69,9 +122,7 @@ mod tests {
             .decode()
             .unwrap();
 
-        let hasher = DifferenceHasher {
-            ..Default::default()
-        };
+        let hasher = DifferenceHasher::default();
 
         // Act
         let hash = hasher.hash_from_img(&img);
@@ -89,10 +140,7 @@ mod tests {
             .decode()
             .unwrap();
 
-        let hasher = DifferenceHasher {
-            color_space: ColorSpace::REC709,
-            ..Default::default()
-        };
+        let hasher = DifferenceHasher::new(8, 8, ColorSpace::REC709).unwrap();
 
         // Act
         let hash = hasher.hash_from_img(&img);
@@ -105,9 +153,7 @@ mod tests {
     #[test]
     fn test_difference_hash_from_path() {
         // Arrange
-        let hasher = DifferenceHasher {
-            ..Default::default()
-        };
+        let hasher = DifferenceHasher::default();
 
         // Act
         let hash = hasher.hash_from_path(Path::new(TEST_IMG));
@@ -125,11 +171,7 @@ mod tests {
             .decode()
             .unwrap();
 
-        let hasher = DifferenceHasher {
-            width: 16,
-            height: 16,
-            ..Default::default()
-        };
+        let hasher = DifferenceHasher::new(16, 16, ColorSpace::REC601).unwrap();
 
         // Act
         let hash = hasher.hash_from_img(&img);
@@ -143,9 +185,7 @@ mod tests {
     #[test]
     fn test_difference_hash_from_nonexisting_path() {
         // Arrange
-        let hasher = DifferenceHasher {
-            ..Default::default()
-        };
+        let hasher = DifferenceHasher::default();
 
         // Act
         let hash = hasher.hash_from_path(Path::new("./does/not/exist.png"));
@@ -157,9 +197,7 @@ mod tests {
     #[test]
     fn test_difference_hash_from_txt_file() {
         // Arrange
-        let hasher = DifferenceHasher {
-            ..Default::default()
-        };
+        let hasher = DifferenceHasher::default();
 
         // Act
         let hash = hasher.hash_from_path(Path::new(TXT_FILE));
