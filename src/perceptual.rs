@@ -51,8 +51,7 @@ impl ImageHasher for PerceptualHasher {
             .collect::<Vec<_>>();
 
         // compute the median over the flattened matrix
-        let median = median(scaled_matrix.iter().copied())
-            .ok_or(ImageHashError::EmptyMatrix)?;
+        let median = median(scaled_matrix.iter().copied()).ok_or(ImageHashError::EmptyMatrix)?;
 
         ImageHash::from_bool_iter(
             scaled_matrix.into_iter().map(|pixel| pixel > median),

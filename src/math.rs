@@ -43,35 +43,31 @@ pub fn dct2_in_place(input: &mut [f64], skip: usize, buf: &mut [f64]) {
 
     // Internal invariant: callers are responsible for allocating a buffer that fits the result.
     // A too-small buffer is a programming bug, not a recoverable error.
-    assert!(
-        n <= buf.len(),
-        "buffer is too small for the DCT result"
-    );
+    assert!(n <= buf.len(), "buffer is too small for the DCT result");
 
     // For each output frequency index k, compute the DCT coefficient.
     // Each coefficient is a weighted sum of all input values, where the weights
     // are cosine basis functions at increasing frequencies.
     (0..n)
         .map(|k| {
-            2.0
-                * input
-                    // chunks(skip) gives us windows of `skip` elements; we only use
-                    // the first element of each chunk (x[0]), effectively stepping
-                    // through the array with the given stride.
-                    .chunks(skip)
-                    .enumerate()
-                    .map(|(i, x)| {
-                        // cos(pi * k * (2i+1) / 2N) is the DCT-II basis function.
-                        // - k selects the frequency (0 = DC / average, higher = finer detail)
-                        // - i is the position of the current input sample
-                        let numerator = std::f64::consts::PI * k as f64 * (2 * i + 1) as f64;
-                        let denominator = (2 * n) as f64;
+            2.0 * input
+                // chunks(skip) gives us windows of `skip` elements; we only use
+                // the first element of each chunk (x[0]), effectively stepping
+                // through the array with the given stride.
+                .chunks(skip)
+                .enumerate()
+                .map(|(i, x)| {
+                    // cos(pi * k * (2i+1) / 2N) is the DCT-II basis function.
+                    // - k selects the frequency (0 = DC / average, higher = finer detail)
+                    // - i is the position of the current input sample
+                    let numerator = std::f64::consts::PI * k as f64 * (2 * i + 1) as f64;
+                    let denominator = (2 * n) as f64;
 
-                        let cosine = (numerator / denominator).cos();
+                    let cosine = (numerator / denominator).cos();
 
-                        x[0] * cosine
-                    })
-                    .sum::<f64>()
+                    x[0] * cosine
+                })
+                .sum::<f64>()
         })
         .enumerate()
         .for_each(|(i, value)| buf[i] = value);

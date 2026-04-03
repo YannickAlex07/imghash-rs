@@ -350,7 +350,10 @@ mod tests {
 
         // Assert
         assert!(decoded.is_ok());
-        assert_eq!(decoded.unwrap().iter_bool().collect::<Vec<bool>>(), expected);
+        assert_eq!(
+            decoded.unwrap().iter_bool().collect::<Vec<bool>>(),
+            expected
+        );
     }
 
     #[test]
@@ -368,7 +371,10 @@ mod tests {
 
         // Assert
         assert!(decoded.is_ok());
-        assert_eq!(decoded.unwrap().iter_bool().collect::<Vec<bool>>(), expected);
+        assert_eq!(
+            decoded.unwrap().iter_bool().collect::<Vec<bool>>(),
+            expected
+        );
     }
 
     #[test]
@@ -385,7 +391,10 @@ mod tests {
 
         // Assert
         assert!(decoded.is_ok());
-        assert_eq!(decoded.unwrap().iter_bool().collect::<Vec<bool>>(), expected);
+        assert_eq!(
+            decoded.unwrap().iter_bool().collect::<Vec<bool>>(),
+            expected
+        );
     }
 
     #[test]
@@ -398,7 +407,10 @@ mod tests {
 
         // Assert
         assert!(decoded.is_ok());
-        assert_eq!(decoded.unwrap().iter_bool().collect::<Vec<bool>>(), expected);
+        assert_eq!(
+            decoded.unwrap().iter_bool().collect::<Vec<bool>>(),
+            expected
+        );
     }
 
     #[test]
@@ -476,11 +488,9 @@ mod tests {
     #[test]
     fn test_image_hash_distance_with_equal_hashes() {
         // Arrange
-        let hash1 =
-            ImageHash::from_bool_iter(vec![false, true, true, false], 2, 2).unwrap();
+        let hash1 = ImageHash::from_bool_iter(vec![false, true, true, false], 2, 2).unwrap();
 
-        let hash2 =
-            ImageHash::from_bool_iter(vec![false, true, true, false], 2, 2).unwrap();
+        let hash2 = ImageHash::from_bool_iter(vec![false, true, true, false], 2, 2).unwrap();
 
         // Act
         let distance = hash1.distance(&hash2);
@@ -493,11 +503,10 @@ mod tests {
     #[test]
     fn test_image_hash_distance_with_different_sizes() {
         // Arrange
-        let hash1 = ImageHash::from_bool_iter(vec![false, true, false, true, false, false], 3, 2)
-            .unwrap();
+        let hash1 =
+            ImageHash::from_bool_iter(vec![false, true, false, true, false, false], 3, 2).unwrap();
 
-        let hash2 =
-            ImageHash::from_bool_iter(vec![false, true, true, false], 2, 2).unwrap();
+        let hash2 = ImageHash::from_bool_iter(vec![false, true, true, false], 2, 2).unwrap();
 
         // Act & Assert
         assert!(hash1.distance(&hash2).is_err());
