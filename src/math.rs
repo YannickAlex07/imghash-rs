@@ -317,6 +317,18 @@ mod tests {
     }
 
     #[test]
+    fn test_median_with_single_element() {
+        // Arrange
+        let input = vec![42.0];
+
+        // Act
+        let result = median(input);
+
+        // Assert
+        assert_eq!(result, Some(42.0));
+    }
+
+    #[test]
     fn test_median_with_empty_vector() {
         // Arrange
         let input = vec![];

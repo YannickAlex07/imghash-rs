@@ -115,6 +115,29 @@ mod tests {
     }
 
     #[test]
+    fn test_median_hash_from_img_with_non_default_size() {
+        // Arrange
+        let img = ImageReader::open(Path::new(TEST_IMG))
+            .unwrap()
+            .decode()
+            .unwrap();
+
+        let hasher = MedianHasher {
+            width: 16,
+            height: 16,
+            ..Default::default()
+        };
+
+        // Act
+        let hash = hasher.hash_from_img(&img);
+
+        // Assert
+        assert!(hash.is_ok());
+        let hash = hash.unwrap();
+        assert_eq!(hash.shape(), (16, 16));
+    }
+
+    #[test]
     fn test_median_hash_from_nonexisting_path() {
         // Arrange
         let hasher = MedianHasher {

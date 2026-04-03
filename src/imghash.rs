@@ -69,16 +69,32 @@ impl ImageHash {
 
         let mut data = bitbox![u8, Lsb0; 0; length];
         let mut count = 0;
+        let mut iter = iter.into_iter();
 
-        iter.into_iter().enumerate().for_each(|(i, bit)| {
-            data.set(i, bit);
-            count += 1;
-        });
+        for i in 0..length {
+            match iter.next() {
+                Some(bit) => {
+                    data.set(i, bit);
+                    count += 1;
+                }
+                None => break,
+            }
+        }
 
+        // Check if the iterator had fewer elements than expected
         if count != length {
             return Err(ImageHashError::IteratorLengthMismatch {
                 expected: length,
                 actual: count,
+            });
+        }
+
+        // Check if the iterator has leftover elements (more than expected)
+        if iter.next().is_some() {
+            let remaining = iter.count(); // count remaining after the one we just consumed
+            return Err(ImageHashError::IteratorLengthMismatch {
+                expected: length,
+                actual: length + 1 + remaining,
             });
         }
 
@@ -461,6 +477,46 @@ mod tests {
     // DISTANCE
 
     #[test]
+    fn test_image_hash_from_bool_iter_with_too_many_elements() {
+        // Arrange: 2x2 = 4 expected, but we supply 6
+        let result = ImageHash::from_bool_iter(
+            vec![true, false, true, false, true, true],
+            2,
+            2,
+        );
+
+        // Assert
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(matches!(
+            err,
+            ImageHashError::IteratorLengthMismatch {
+                expected: 4,
+                actual: 6,
+            }
+        ));
+    }
+
+    #[test]
+    fn test_image_hash_from_bool_iter_with_one_extra_element() {
+        // Arrange: 1x1 = 1 expected, but we supply 2
+        let result = ImageHash::from_bool_iter(vec![true, false], 1, 1);
+
+        // Assert
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(matches!(
+            err,
+            ImageHashError::IteratorLengthMismatch {
+                expected: 1,
+                actual: 2,
+            }
+        ));
+    }
+
+    // DISTANCE
+
+    #[test]
     fn test_image_hash_distance_with_unequal_hashes() {
         // Arrange
         let hash1 = ImageHash::from_bool_iter(
@@ -498,6 +554,171 @@ mod tests {
         // Assert
         assert!(distance.is_ok());
         assert_eq!(distance.unwrap(), 0);
+    }
+
+    #[test]
+    fn test_image_hash_from_bool_iter_with_too_few_elements() {
+        // Arrange: 3x2 = 6 expected, but we supply 4
+        let result = ImageHash::from_bool_iter(
+            vec![true, false, true, false],
+            3,
+            2,
+        );
+
+        // Assert
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(matches!(
+            err,
+            ImageHashError::IteratorLengthMismatch {
+                expected: 6,
+                actual: 4,
+            }
+        ));
+    }
+
+    // ROUNDTRIP
+
+    #[test]
+    fn test_image_hash_encode_decode_roundtrip() {
+        // Arrange
+        let original = ImageHash::from_bool_iter(
+            vec![
+                false, false, true, false,
+                false, true, false, false,
+                true, true, true, true,
+                false, false, false, false,
+            ],
+            4,
+            4,
+        )
+        .unwrap();
+
+        // Act
+        let encoded = original.encode().unwrap();
+        let decoded = ImageHash::decode(&encoded, 4, 4).unwrap();
+
+        // Assert
+        assert_eq!(original, decoded);
+    }
+
+    #[test]
+    fn test_image_hash_encode_decode_roundtrip_non_square() {
+        // Arrange
+        let original = ImageHash::from_bool_iter(
+            vec![
+                false, true, true, false, true,
+                false, true, false, false, false,
+                true, true, true, true, true,
+                false, false, false, false, true,
+            ],
+            5,
+            4,
+        )
+        .unwrap();
+
+        // Act
+        let encoded = original.encode().unwrap();
+        let decoded = ImageHash::decode(&encoded, 5, 4).unwrap();
+
+        // Assert
+        assert_eq!(original, decoded);
+    }
+
+    #[test]
+    fn test_image_hash_encode_decode_roundtrip_uneven_bits() {
+        // Arrange: 5x3 = 15 bits (not divisible by 4 or 8)
+        let original = ImageHash::from_bool_iter(
+            vec![
+                false, true, true, false, true,
+                false, true, false, false, false,
+                true, true, true, true, true,
+            ],
+            5,
+            3,
+        )
+        .unwrap();
+
+        // Act
+        let encoded = original.encode().unwrap();
+        let decoded = ImageHash::decode(&encoded, 5, 3).unwrap();
+
+        // Assert
+        assert_eq!(original, decoded);
+    }
+
+    // DISTANCE (continued)
+
+    #[test]
+    fn test_image_hash_distance_is_symmetric() {
+        // Arrange
+        let hash1 = ImageHash::from_bool_iter(
+            vec![false, true, true, true, false, false, true, false, true],
+            3,
+            3,
+        )
+        .unwrap();
+
+        let hash2 = ImageHash::from_bool_iter(
+            vec![true, true, true, false, false, false, true, false, true],
+            3,
+            3,
+        )
+        .unwrap();
+
+        // Act & Assert
+        assert_eq!(
+            hash1.distance(&hash2).unwrap(),
+            hash2.distance(&hash1).unwrap()
+        );
+    }
+
+    #[test]
+    fn test_image_hash_distance_all_bits_differ() {
+        // Arrange: all true vs all false => distance = 4
+        let hash1 = ImageHash::from_bool_iter(
+            vec![true, true, true, true],
+            2,
+            2,
+        )
+        .unwrap();
+
+        let hash2 = ImageHash::from_bool_iter(
+            vec![false, false, false, false],
+            2,
+            2,
+        )
+        .unwrap();
+
+        // Act
+        let distance = hash1.distance(&hash2).unwrap();
+
+        // Assert
+        assert_eq!(distance, 4);
+    }
+
+    // DISPLAY
+
+    #[test]
+    fn test_image_hash_display() {
+        // Arrange
+        let hash = ImageHash::from_bool_iter(
+            vec![
+                false, false, true, false,
+                false, true, false, false,
+                true, true, true, true,
+                false, false, false, false,
+            ],
+            4,
+            4,
+        )
+        .unwrap();
+
+        // Act
+        let display = format!("{}", hash);
+
+        // Assert
+        assert_eq!(display, "24f0");
     }
 
     #[test]
