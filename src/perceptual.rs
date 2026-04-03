@@ -1,7 +1,7 @@
 use crate::{
     imageops::convert,
     math::{dct2_over_matrix_in_place, median, Axis},
-    ColorSpace, ImageHash, ImageHasher,
+    ColorSpace, ImageHash, ImageHashError, ImageHasher,
 };
 
 #[derive(Debug, Clone)]
@@ -20,7 +20,11 @@ pub struct PerceptualHasher {
 }
 
 impl ImageHasher for PerceptualHasher {
-    fn hash_from_img(&self, img: &image::DynamicImage) -> ImageHash {
+    fn hash_from_img(&self, img: &image::DynamicImage) -> Result<ImageHash, ImageHashError> {
+        if self.width == 0 || self.height == 0 {
+            return Err(ImageHashError::EmptyMatrix);
+        }
+
         let width = self.width * self.factor;
         let height = self.height * self.factor;
 
@@ -47,7 +51,7 @@ impl ImageHasher for PerceptualHasher {
             .collect::<Vec<_>>();
 
         // compute the median over the flattened matrix
-        let median = median(scaled_matrix.iter().copied()).unwrap();
+        let median = median(scaled_matrix.iter().copied()).ok_or(ImageHashError::EmptyMatrix)?;
 
         ImageHash::from_bool_iter(
             scaled_matrix.into_iter().map(|pixel| pixel > median),
@@ -98,7 +102,8 @@ mod tests {
         let hash = hasher.hash_from_img(&img);
 
         // Assert
-        assert_eq!(hash.encode(), REC_601_HASH)
+        assert!(hash.is_ok());
+        assert_eq!(hash.unwrap().encode().unwrap(), REC_601_HASH)
     }
 
     #[test]
@@ -118,7 +123,8 @@ mod tests {
         let hash = hasher.hash_from_img(&img);
 
         // Assert
-        assert_eq!(hash.encode(), REC_709_HASH)
+        assert!(hash.is_ok());
+        assert_eq!(hash.unwrap().encode().unwrap(), REC_709_HASH)
     }
 
     #[test]
@@ -132,10 +138,31 @@ mod tests {
         let hash = hasher.hash_from_path(Path::new(TEST_IMG));
 
         // Assert
-        match hash {
-            Ok(hash) => assert_eq!(hash.encode(), REC_601_HASH),
-            Err(err) => panic!("could not read image: {:?}", err),
-        }
+        assert!(hash.is_ok());
+        assert_eq!(hash.unwrap().encode().unwrap(), REC_601_HASH)
+    }
+
+    #[test]
+    fn test_perceptual_hash_from_img_with_non_default_size() {
+        // Arrange
+        let img = ImageReader::open(Path::new(TEST_IMG))
+            .unwrap()
+            .decode()
+            .unwrap();
+
+        let hasher = PerceptualHasher {
+            width: 16,
+            height: 16,
+            ..Default::default()
+        };
+
+        // Act
+        let hash = hasher.hash_from_img(&img);
+
+        // Assert
+        assert!(hash.is_ok());
+        let hash = hash.unwrap();
+        assert_eq!(hash.shape(), (16, 16));
     }
 
     #[test]
@@ -149,10 +176,7 @@ mod tests {
         let hash = hasher.hash_from_path(Path::new("./does/not/exist.png"));
 
         // Assert
-        match hash {
-            Ok(hash) => panic!("found hash for non-existing image: {:?}", hash),
-            Err(_) => (),
-        }
+        assert!(hash.is_err());
     }
 
     #[test]
@@ -166,9 +190,6 @@ mod tests {
         let hash = hasher.hash_from_path(Path::new(TXT_FILE));
 
         // Assert
-        match hash {
-            Ok(hash) => panic!("found hash for non-existing image: {:?}", hash),
-            Err(_) => (),
-        }
+        assert!(hash.is_err());
     }
 }

@@ -1,6 +1,5 @@
 use average::AverageHasher;
 use difference::DifferenceHasher;
-use image::ImageError;
 use median::MedianHasher;
 use perceptual::PerceptualHasher;
 use std::path::Path;
@@ -16,11 +15,14 @@ pub trait ImageHasher {
     /// # Returns
     ///
     /// The generated image hash.
-    fn hash_from_path(&self, path: &Path) -> Result<ImageHash, ImageError> {
-        match image::ImageReader::open(path)?.decode() {
-            Ok(img) => Ok(self.hash_from_img(&img)),
-            Err(e) => Err(e),
-        }
+    fn hash_from_path(&self, path: &Path) -> Result<ImageHash, ImageHashError> {
+        let img = image::ImageReader::open(path)
+            .map_err(|e| ImageHashError::IoError {
+                source: e,
+                path: path.to_path_buf(),
+            })?
+            .decode()?;
+        self.hash_from_img(&img)
     }
 
     /// Generates a hash for a given image.
@@ -32,7 +34,7 @@ pub trait ImageHasher {
     /// # Returns
     ///
     /// The generated image hash.
-    fn hash_from_img(&self, img: &image::DynamicImage) -> ImageHash;
+    fn hash_from_img(&self, img: &image::DynamicImage) -> Result<ImageHash, ImageHashError>;
 }
 
 /// Calculate the average hash for an image at the specified path. Uses the default
@@ -44,8 +46,8 @@ pub trait ImageHasher {
 ///
 /// # Returns
 /// * An [`ImageHash`]-struct that can be encoded into a string representation
-/// * An [`ImageError`] if something went wrong while loading the image
-pub fn average_hash(path: &Path) -> Result<ImageHash, ImageError> {
+/// * An [`ImageHashError`] if something went wrong while loading the image
+pub fn average_hash(path: &Path) -> Result<ImageHash, ImageHashError> {
     // create the hasher
     let hasher = AverageHasher::default();
 
@@ -61,8 +63,8 @@ pub fn average_hash(path: &Path) -> Result<ImageHash, ImageError> {
 ///
 /// # Returns
 /// * An [`ImageHash`]-struct that can be encoded into a string representation
-/// * An [`ImageError`] if something went wrong while loading the image
-pub fn median_hash(path: &Path) -> Result<ImageHash, ImageError> {
+/// * An [`ImageHashError`] if something went wrong while loading the image
+pub fn median_hash(path: &Path) -> Result<ImageHash, ImageHashError> {
     // create the hasher
     let hasher = MedianHasher::default();
 
@@ -78,8 +80,8 @@ pub fn median_hash(path: &Path) -> Result<ImageHash, ImageError> {
 ///
 /// # Returns
 /// * An [`ImageHash`]-struct that can be encoded into a string representation
-/// * An [`ImageError`] if something went wrong while loading the image
-pub fn difference_hash(path: &Path) -> Result<ImageHash, ImageError> {
+/// * An [`ImageHashError`] if something went wrong while loading the image
+pub fn difference_hash(path: &Path) -> Result<ImageHash, ImageHashError> {
     // create the hasher
     let hasher = DifferenceHasher::default();
 
@@ -95,8 +97,8 @@ pub fn difference_hash(path: &Path) -> Result<ImageHash, ImageError> {
 ///
 /// # Returns
 /// * An [`ImageHash`]-struct that can be encoded into a string representation
-/// * An [`ImageError`] if something went wrong while loading the image
-pub fn perceptual_hash(path: &Path) -> Result<ImageHash, ImageError> {
+/// * An [`ImageHashError`] if something went wrong while loading the image
+pub fn perceptual_hash(path: &Path) -> Result<ImageHash, ImageHashError> {
     // create the hasher
     let hasher = PerceptualHasher::default();
 
@@ -117,6 +119,7 @@ mod math;
 // public exports
 pub use crate::imageops::ColorSpace;
 pub use crate::imghash::ImageHash;
+pub use crate::imghash::ImageHashError;
 
 #[cfg(test)]
 mod tests {
@@ -134,7 +137,8 @@ mod tests {
         let hash = average_hash(path);
 
         // Assert
-        assert_eq!(hash.unwrap().encode(), "ffffff0e00000301")
+        assert!(hash.is_ok());
+        assert_eq!(hash.unwrap().encode().unwrap(), "ffffff0e00000301")
     }
 
     #[test]
@@ -146,10 +150,7 @@ mod tests {
         let hash = average_hash(path);
 
         // Assert
-        match hash {
-            Ok(_) => panic!("should not be able to calculate hash for txt file"),
-            Err(_) => {}
-        }
+        assert!(hash.is_err());
     }
 
     #[test]
@@ -161,7 +162,8 @@ mod tests {
         let hash = median_hash(path);
 
         // Assert
-        assert_eq!(hash.unwrap().encode(), "ffffff1e00000301")
+        assert!(hash.is_ok());
+        assert_eq!(hash.unwrap().encode().unwrap(), "ffffff1e00000301")
     }
 
     #[test]
@@ -173,10 +175,7 @@ mod tests {
         let hash = median_hash(path);
 
         // Assert
-        match hash {
-            Ok(_) => panic!("should not be able to calculate hash for txt file"),
-            Err(_) => {}
-        }
+        assert!(hash.is_err());
     }
 
     #[test]
@@ -188,7 +187,8 @@ mod tests {
         let hash = difference_hash(path);
 
         // Assert
-        assert_eq!(hash.unwrap().encode(), "cc99717ed9ea0627")
+        assert!(hash.is_ok());
+        assert_eq!(hash.unwrap().encode().unwrap(), "cc99717ed9ea0627")
     }
 
     #[test]
@@ -200,10 +200,7 @@ mod tests {
         let hash = difference_hash(path);
 
         // Assert
-        match hash {
-            Ok(_) => panic!("should not be able to calculate hash for txt file"),
-            Err(_) => {}
-        }
+        assert!(hash.is_err());
     }
 
     #[test]
@@ -215,7 +212,8 @@ mod tests {
         let hash = perceptual_hash(path);
 
         // Assert
-        assert_eq!(hash.unwrap().encode(), "acdbe86135344e3a")
+        assert!(hash.is_ok());
+        assert_eq!(hash.unwrap().encode().unwrap(), "acdbe86135344e3a")
     }
 
     #[test]
@@ -227,9 +225,6 @@ mod tests {
         let hash = perceptual_hash(path);
 
         // Assert
-        match hash {
-            Ok(_) => panic!("should not be able to calculate hash for txt file"),
-            Err(_) => {}
-        }
+        assert!(hash.is_err());
     }
 }

@@ -1,4 +1,4 @@
-use crate::{imageops::convert, ColorSpace, ImageHash, ImageHasher};
+use crate::{imageops::convert, ColorSpace, ImageHash, ImageHashError, ImageHasher};
 
 #[derive(Debug, Clone)]
 pub struct DifferenceHasher {
@@ -12,7 +12,11 @@ pub struct DifferenceHasher {
 }
 
 impl ImageHasher for DifferenceHasher {
-    fn hash_from_img(&self, img: &image::DynamicImage) -> ImageHash {
+    fn hash_from_img(&self, img: &image::DynamicImage) -> Result<ImageHash, ImageHashError> {
+        if self.width == 0 || self.height == 0 {
+            return Err(ImageHashError::EmptyMatrix);
+        }
+
         let converted = convert(img, self.width + 1, self.height, self.color_space);
 
         // we will compute the differences on this matrix
@@ -73,7 +77,8 @@ mod tests {
         let hash = hasher.hash_from_img(&img);
 
         // Assert
-        assert_eq!(hash.encode(), REC_601_HASH)
+        assert!(hash.is_ok());
+        assert_eq!(hash.unwrap().encode().unwrap(), REC_601_HASH)
     }
 
     #[test]
@@ -93,7 +98,8 @@ mod tests {
         let hash = hasher.hash_from_img(&img);
 
         // Assert
-        assert_eq!(hash.encode(), REC_709_HASH)
+        assert!(hash.is_ok());
+        assert_eq!(hash.unwrap().encode().unwrap(), REC_709_HASH)
     }
 
     #[test]
@@ -107,10 +113,31 @@ mod tests {
         let hash = hasher.hash_from_path(Path::new(TEST_IMG));
 
         // Assert
-        match hash {
-            Ok(hash) => assert_eq!(hash.encode(), REC_601_HASH),
-            Err(err) => panic!("could not read image: {:?}", err),
-        }
+        assert!(hash.is_ok());
+        assert_eq!(hash.unwrap().encode().unwrap(), REC_601_HASH)
+    }
+
+    #[test]
+    fn test_difference_hash_from_img_with_non_default_size() {
+        // Arrange
+        let img = ImageReader::open(Path::new(TEST_IMG))
+            .unwrap()
+            .decode()
+            .unwrap();
+
+        let hasher = DifferenceHasher {
+            width: 16,
+            height: 16,
+            ..Default::default()
+        };
+
+        // Act
+        let hash = hasher.hash_from_img(&img);
+
+        // Assert
+        assert!(hash.is_ok());
+        let hash = hash.unwrap();
+        assert_eq!(hash.shape(), (16, 16));
     }
 
     #[test]
@@ -124,10 +151,7 @@ mod tests {
         let hash = hasher.hash_from_path(Path::new("./does/not/exist.png"));
 
         // Assert
-        match hash {
-            Ok(hash) => panic!("found hash for non-existing image: {:?}", hash),
-            Err(_) => (),
-        }
+        assert!(hash.is_err());
     }
 
     #[test]
@@ -141,9 +165,6 @@ mod tests {
         let hash = hasher.hash_from_path(Path::new(TXT_FILE));
 
         // Assert
-        match hash {
-            Ok(hash) => panic!("found hash for non-existing image: {:?}", hash),
-            Err(_) => (),
-        }
+        assert!(hash.is_err());
     }
 }
