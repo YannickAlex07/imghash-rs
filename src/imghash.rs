@@ -89,12 +89,13 @@ impl ImageHash {
             });
         }
 
-        // Check if the iterator has leftover elements (more than expected)
+        // Check if the iterator has leftover elements (more than expected).
+        // We intentionally avoid calling iter.count() here because the iterator
+        // may be unbounded, which would cause an infinite loop.
         if iter.next().is_some() {
-            let remaining = iter.count(); // count remaining after the one we just consumed
             return Err(ImageHashError::IteratorLengthMismatch {
                 expected: length,
-                actual: length + 1 + remaining,
+                actual: length + 1,
             });
         }
 
@@ -488,7 +489,7 @@ mod tests {
             err,
             ImageHashError::IteratorLengthMismatch {
                 expected: 4,
-                actual: 6,
+                actual: 5,
             }
         ));
     }
@@ -506,6 +507,23 @@ mod tests {
             ImageHashError::IteratorLengthMismatch {
                 expected: 1,
                 actual: 2,
+            }
+        ));
+    }
+
+    #[test]
+    fn test_image_hash_from_bool_iter_with_unbounded_iterator() {
+        // Arrange: 2x2 = 4 expected, but we supply an infinite iterator
+        let result = ImageHash::from_bool_iter(std::iter::repeat(true), 2, 2);
+
+        // Assert: must return an error without hanging
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(matches!(
+            err,
+            ImageHashError::IteratorLengthMismatch {
+                expected: 4,
+                actual: 5,
             }
         ));
     }
