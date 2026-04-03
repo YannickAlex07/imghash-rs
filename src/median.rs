@@ -15,6 +15,10 @@ pub struct MedianHasher {
 
 impl ImageHasher for MedianHasher {
     fn hash_from_img(&self, img: &image::DynamicImage) -> Result<ImageHash, ImageHashError> {
+        if self.width == 0 || self.height == 0 {
+            return Err(ImageHashError::EmptyMatrix);
+        }
+
         let converted = convert(img, self.width, self.height, self.color_space);
 
         let mut values: Vec<u8> = converted.as_bytes().to_vec();

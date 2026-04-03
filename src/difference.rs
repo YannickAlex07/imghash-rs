@@ -13,6 +13,10 @@ pub struct DifferenceHasher {
 
 impl ImageHasher for DifferenceHasher {
     fn hash_from_img(&self, img: &image::DynamicImage) -> Result<ImageHash, ImageHashError> {
+        if self.width == 0 || self.height == 0 {
+            return Err(ImageHashError::EmptyMatrix);
+        }
+
         let converted = convert(img, self.width + 1, self.height, self.color_space);
 
         // we will compute the differences on this matrix

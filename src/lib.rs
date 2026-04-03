@@ -16,7 +16,12 @@ pub trait ImageHasher {
     ///
     /// The generated image hash.
     fn hash_from_path(&self, path: &Path) -> Result<ImageHash, ImageHashError> {
-        let img = image::ImageReader::open(path)?.decode()?;
+        let img = image::ImageReader::open(path)
+            .map_err(|e| ImageHashError::IoError {
+                source: e,
+                path: path.to_path_buf(),
+            })?
+            .decode()?;
         self.hash_from_img(&img)
     }
 

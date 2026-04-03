@@ -21,6 +21,10 @@ pub struct PerceptualHasher {
 
 impl ImageHasher for PerceptualHasher {
     fn hash_from_img(&self, img: &image::DynamicImage) -> Result<ImageHash, ImageHashError> {
+        if self.width == 0 || self.height == 0 {
+            return Err(ImageHashError::EmptyMatrix);
+        }
+
         let width = self.width * self.factor;
         let height = self.height * self.factor;
 
@@ -47,7 +51,8 @@ impl ImageHasher for PerceptualHasher {
             .collect::<Vec<_>>();
 
         // compute the median over the flattened matrix
-        let median = median(scaled_matrix.iter().copied()).unwrap();
+        let median = median(scaled_matrix.iter().copied())
+            .ok_or(ImageHashError::EmptyMatrix)?;
 
         ImageHash::from_bool_iter(
             scaled_matrix.into_iter().map(|pixel| pixel > median),

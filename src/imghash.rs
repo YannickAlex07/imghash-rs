@@ -1,12 +1,14 @@
 use std::io;
+use std::path::PathBuf;
 
 use bitvec::prelude::*;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
+#[non_exhaustive]
 pub enum ImageHashError {
-    #[error("Failed to read image from path: {0}")]
-    IoError(#[from] io::Error),
+    #[error("Failed to read image from path '{}': {source}", path.display())]
+    IoError { source: io::Error, path: PathBuf },
 
     #[error("Failed to decode image: {0}")]
     ImageError(#[from] image::ImageError),
@@ -14,8 +16,25 @@ pub enum ImageHashError {
     #[error("Matrix cannot be empty")]
     EmptyMatrix,
 
-    #[error("Data length {actual} does not match the specified dimensions {expected}")]
-    DimensionMismatch { expected: usize, actual: usize },
+    #[error("Iterator yielded {actual} elements, expected {expected} (width * height)")]
+    IteratorLengthMismatch { expected: usize, actual: usize },
+
+    #[error("Cannot compute distance: hash shapes differ ({self_shape:?} vs {other_shape:?})")]
+    ShapeMismatch {
+        self_shape: (usize, usize),
+        other_shape: (usize, usize),
+    },
+
+    #[error("Hex string length {actual} does not match expected {expected} nibbles for {width}x{height} hash")]
+    InvalidHashLength {
+        expected: usize,
+        actual: usize,
+        width: u32,
+        height: u32,
+    },
+
+    #[error("Invalid hexadecimal character in hash string")]
+    InvalidHexCharacter,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -57,7 +76,7 @@ impl ImageHash {
         });
 
         if count != length {
-            return Err(ImageHashError::DimensionMismatch {
+            return Err(ImageHashError::IteratorLengthMismatch {
                 expected: length,
                 actual: count,
             });
@@ -83,9 +102,9 @@ impl ImageHash {
     /// The hamming distance is the number of bits that differ between the two hashes.
     pub fn distance(&self, other: &ImageHash) -> Result<usize, ImageHashError> {
         if self.shape() != other.shape() {
-            return Err(ImageHashError::DimensionMismatch {
-                expected: self.data.len(),
-                actual: other.data.len(),
+            return Err(ImageHashError::ShapeMismatch {
+                self_shape: self.shape(),
+                other_shape: other.shape(),
             });
         }
 
@@ -128,7 +147,7 @@ impl ImageHash {
             }
         }
 
-        // SAFETY: hex formatting only produces ASCII bytes
+        // Infallible: hex formatting only produces valid UTF-8 ASCII bytes
         Ok(String::from_utf8(result).unwrap())
     }
 
@@ -145,34 +164,30 @@ impl ImageHash {
     /// it allows the decoding of hashes that have been generated on non-square matrices. This is because
     /// the original package actually only allows the generation of hashes on square matrices, however this
     /// crate does allow arbitrary dimensions.
-    pub fn decode(s: &str, width: u32, height: u32) -> Result<ImageHash, String> {
-        // first we validate that the width and height actually make sense with the given string
+    pub fn decode(s: &str, width: u32, height: u32) -> Result<ImageHash, ImageHashError> {
         let length = width as usize * height as usize;
 
-        // guard against too small values
         if length == 0 {
-            return Err("Width or height cannot be 0".to_string());
+            return Err(ImageHashError::EmptyMatrix);
         }
 
-        // validate that s is a valid string
-        if s.is_empty() {
-            return Err("String is empty".to_string());
-        }
-
-        // guard against a string that is too short or too long for the specified size
         let size = (length + 7) / 8;
         let nibbles = (length + 3) / 4;
         let padding = (size * 8) - length;
 
         if s.len() != nibbles {
-            return Err("String is too short or too long for the specified size".to_string());
+            return Err(ImageHashError::InvalidHashLength {
+                expected: nibbles,
+                actual: s.len(),
+                width,
+                height,
+            });
         }
 
         // Add padding if the number of nibbles is odd
         let mut iter =
             std::iter::repeat_n('0', if nibbles % 2 == 1 { 1 } else { 0 }).chain(s.chars());
 
-        // we create a bit vector of the correct size
         let mut data = Vec::<u8>::with_capacity(size);
 
         for _ in 0..size {
@@ -180,13 +195,13 @@ impl ImageHash {
                 .next()
                 .unwrap()
                 .to_digit(16)
-                .ok_or_else(|| "invalid digit found in string".to_string())?;
+                .ok_or(ImageHashError::InvalidHexCharacter)?;
 
             let lo = iter
                 .next()
                 .unwrap()
                 .to_digit(16)
-                .ok_or_else(|| "invalid digit found in string".to_string())?;
+                .ok_or(ImageHashError::InvalidHexCharacter)?;
 
             let value = ((hi << 4) + lo) as u8;
             data.push(value);
