@@ -62,8 +62,8 @@ impl ImageHasher for DifferenceHasher {
             compare_matrix
                 .iter()
                 .flat_map(|row| row.windows(2).map(|window| window[0] < window[1])),
-            width,
-            height,
+            self.width,
+            self.height,
         )
     }
 }

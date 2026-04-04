@@ -1,3 +1,47 @@
+//! # imghash
+//!
+//! `imghash` provides image hashing algorithms for Rust, compatible with the
+//! Python [`imagehash`](https://pypi.org/project/ImageHash/) package.
+//!
+//! The following hash algorithms are supported:
+//!
+//! - **Average hash** — compares each pixel to the mean intensity
+//! - **Median hash** — compares each pixel to the median intensity
+//! - **Difference hash** — compares adjacent pixels in each row
+//! - **Perceptual hash** — uses DCT to capture frequency information
+//!
+//! ## Quick start
+//!
+//! ```no_run
+//! use std::path::Path;
+//! use imghash::average_hash;
+//!
+//! let path = Path::new("path/to/image.png");
+//! let hash = average_hash(path).unwrap();
+//!
+//! // Encode as a hex string
+//! let hex = hash.encode().unwrap();
+//!
+//! // Decode back from hex
+//! let decoded = imghash::ImageHash::decode(&hex, 8, 8).unwrap();
+//!
+//! // Compare two hashes
+//! let distance = hash.distance(&decoded).unwrap();
+//! assert_eq!(distance, 0);
+//! ```
+//!
+//! ## Custom hashers
+//!
+//! For more control over hash dimensions and color space, use the hasher structs directly:
+//!
+//! ```no_run
+//! use std::path::Path;
+//! use imghash::{average::AverageHasher, ColorSpace, ImageHasher};
+//!
+//! let hasher = AverageHasher::new(16, 16, ColorSpace::REC601).unwrap();
+//! let hash = hasher.hash_from_path(Path::new("path/to/image.png")).unwrap();
+//! ```
+
 use average::AverageHasher;
 use difference::DifferenceHasher;
 use median::MedianHasher;

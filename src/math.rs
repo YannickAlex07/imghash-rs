@@ -25,7 +25,7 @@ pub enum Axis {
 /// # Arguments
 /// * `input`: A mutable reference to a slice of floats. Results are written back here.
 /// * `skip`: Stride between elements. Use `1` for contiguous (row-wise) data, or
-///           `width` to step through a single column of a row-major matrix.
+///   `width` to step through a single column of a row-major matrix.
 /// * `buf`: Temporary buffer for intermediate results. Must be at least N elements long.
 pub fn dct2_in_place(input: &mut [f64], skip: usize, buf: &mut [f64]) {
     // Internal invariant: all callers control `skip` directly (1 for rows, `width` for columns).
@@ -39,7 +39,7 @@ pub fn dct2_in_place(input: &mut [f64], skip: usize, buf: &mut [f64]) {
     // Number of logical elements to transform.
     // When skip > 1 (column mode), elements are spaced `skip` apart in the flat array,
     // so we divide the total length by the stride to get the element count.
-    let n = (input.len() + skip - 1) / skip;
+    let n = input.len().div_ceil(skip);
 
     // Internal invariant: callers are responsible for allocating a buffer that fits the result.
     // A too-small buffer is a programming bug, not a recoverable error.
@@ -196,7 +196,7 @@ mod tests {
     #[should_panic(expected = "buffer is too small")]
     fn test_dct2_with_small_buffer() {
         let mut input = vec![1., 2., 3., 4.];
-        let buf = &mut vec![0.0; 1];
+        let buf = &mut [0.0; 1];
         dct2_in_place(&mut input, 1, buf);
     }
 

@@ -3,8 +3,8 @@ use image::{imageops::FilterType, DynamicImage, GenericImageView, GrayImage};
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Copy, Default)]
 pub enum ColorSpace {
     #[default]
-    REC709,
     REC601,
+    REC709,
 }
 
 /// Converts a given [`DynamicImage`] to grayscale using the specified [`ColorSpace`].

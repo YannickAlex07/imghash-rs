@@ -50,7 +50,7 @@ let res: String = hash.encode()?;
 Hashes can be encoded into hexadecimal string by using the `encode()`-method:
 
 ```rust
-let res: String = hash.encode();
+let res: String = hash.encode()?;
 ```
 
 A hexadecimal string can also be decoded back into an `ImageHash`:
