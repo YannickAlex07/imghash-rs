@@ -1,5 +1,4 @@
 use image::{imageops::FilterType, DynamicImage, GenericImageView, GrayImage};
-use rayon::prelude::*;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Copy, Default)]
 pub enum ColorSpace {
@@ -24,7 +23,7 @@ fn grayscale(img: &DynamicImage, color_space: ColorSpace) -> DynamicImage {
         ColorSpace::REC601 => [0.299, 0.587, 0.114],
     };
 
-    buffer.par_enumerate_pixels_mut().for_each(|(x, y, pixel)| {
+    buffer.enumerate_pixels_mut().for_each(|(x, y, pixel)| {
         let [r, g, b, _] = img.get_pixel(x, y).0;
 
         let luma =

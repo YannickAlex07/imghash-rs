@@ -1,9 +1,23 @@
-# Version 1.6.0 (WIP)
+# Version 2.0.0
+
+Contributors: @yannickalex07
+
+- Removed deprecated `matric()`-based methods
+- Made hasher field private and added new `new`-function to create hashers
+- Hasher now only accept `u8` instad of `u32` for the hash size
+- Added proper error handling using custom errors
+- Fixed bug in DCT implementation, which might cause false hashes for non-square images
+- Updated dependencies to latest versions
+
+# Version 1.6.0
 
 Contributors: @yannickalex07, @schungx
 
-- Updated perceptual hashing documentation
 - Added new `MedianHasher`
+- Added explanation for perceptual hashing parameters
+- Switched distance to use XOR instead of bit-by-bit comparison
+- Bumped dependencies to latest versions
+- Minor internal tweaks and optimizations
 
 # Version 1.5.0
 
@@ -15,7 +29,7 @@ Contributors: @yannickalex07, @schungx
 
 # Version 1.4.0
 
-Contributors: 
+Contributors: @surno
 
 - Updated the internal image crate to version 0.25.6
 
