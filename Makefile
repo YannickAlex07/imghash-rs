@@ -11,7 +11,7 @@ test:
 
 .PHONY: lint
 lint:
-	cargo check --verbose --workspace --all-targets
+	cargo clippy --all-targets
 
 .PHONY: fmt
 fmt:

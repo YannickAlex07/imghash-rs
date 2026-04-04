@@ -93,8 +93,8 @@ impl ImageHasher for PerceptualHasher {
 
         ImageHash::from_bool_iter(
             scaled_matrix.into_iter().map(|pixel| pixel > median),
-            self.width as u32,
-            self.height as u32,
+            self.width,
+            self.height,
         )
     }
 }

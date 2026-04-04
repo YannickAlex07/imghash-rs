@@ -13,5 +13,5 @@
 
 <!-- Link the task that is related to this if applicable. If not, remove this section. -->
 
-* 
+* Closes 
 

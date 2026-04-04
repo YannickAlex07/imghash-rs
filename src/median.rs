@@ -57,8 +57,8 @@ impl ImageHasher for MedianHasher {
 
         ImageHash::from_bool_iter(
             converted.as_bytes().iter().map(|&p| p > median),
-            width,
-            height,
+            self.width,
+            self.height,
         )
     }
 }

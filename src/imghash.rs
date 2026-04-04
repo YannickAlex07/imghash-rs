@@ -29,8 +29,8 @@ pub enum ImageHashError {
     InvalidHashLength {
         expected: usize,
         actual: usize,
-        width: u32,
-        height: u32,
+        width: u8,
+        height: u8,
     },
 
     #[error("Invalid hexadecimal character in hash string")]
@@ -43,7 +43,7 @@ pub struct ImageHash {
     data: BitBox<u8, Lsb0>,
 
     // Number of columns.
-    width: u32,
+    width: u8,
 }
 
 impl ImageHash {
@@ -51,7 +51,7 @@ impl ImageHash {
     ///
     /// # Arguments
     /// * `iter`: An iterator that yields `bool` values representing the bits of the hash.
-    ///           The length of the stream must match `width * height`.
+    ///   The length of the stream must match `width * height`.
     /// * `width`: Number of columns of the hash.
     /// * `height`: Number of rows of the hash.
     ///
@@ -59,8 +59,8 @@ impl ImageHash {
     /// * The new [`ImageHash`].
     pub fn from_bool_iter(
         iter: impl IntoIterator<Item = bool>,
-        width: u32,
-        height: u32,
+        width: u8,
+        height: u8,
     ) -> Result<ImageHash, ImageHashError> {
         let length = width as usize * height as usize;
         if length == 0 {
@@ -146,9 +146,9 @@ impl ImageHash {
         let mut result = Vec::new();
 
         let length = self.data.len();
-        let size = (length + 7) / 8;
+        let size = length.div_ceil(8);
         let padding = (size * 8) - length;
-        let nibbles = (length + 3) / 4;
+        let nibbles = length.div_ceil(4);
         let odd = nibbles % 2 == 1;
 
         let buffer = BitBox::<u8, Msb0>::from_iter(
@@ -181,15 +181,15 @@ impl ImageHash {
     /// it allows the decoding of hashes that have been generated on non-square matrices. This is because
     /// the original package actually only allows the generation of hashes on square matrices, however this
     /// crate does allow arbitrary dimensions.
-    pub fn decode(s: &str, width: u32, height: u32) -> Result<ImageHash, ImageHashError> {
+    pub fn decode(s: &str, width: u8, height: u8) -> Result<ImageHash, ImageHashError> {
         let length = width as usize * height as usize;
 
         if length == 0 {
             return Err(ImageHashError::EmptyMatrix);
         }
 
-        let size = (length + 7) / 8;
-        let nibbles = (length + 3) / 4;
+        let size = length.div_ceil(8);
+        let nibbles = length.div_ceil(4);
         let padding = (size * 8) - length;
 
         if s.len() != nibbles {

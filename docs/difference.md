@@ -9,7 +9,7 @@
       - [2. Calculating Differences between Neighbours](#2-calculating-differences-between-neighbours)
       - [3. Encoding to Hexadecimal](#3-encoding-to-hexadecimal)
 
-The Difference Hash calculates the brightness difference between neighbouring pixels and encodes them inta a hash.
+The Difference Hash calculates the brightness difference between neighbouring pixels and encodes them into a hash.
 
 ## Pros & Cons
 
@@ -18,7 +18,7 @@ Like each other hashing algorithm, the difference hash algorithm has some pros a
 #### Pros
 
 * Still fairly cheap to compute
-* Resiliant to some color changes in the image
+* Resilient to some color changes in the image
 
 #### Cons
 
@@ -27,7 +27,7 @@ Like each other hashing algorithm, the difference hash algorithm has some pros a
 
 ## Algorithm
 
-The algorithm behind average hash is quite simple and consists of the following steps:
+The algorithm behind difference hash is quite simple and consists of the following steps:
 
 1. Grayscale and resize the input image
 2. Calculate Differences between neighbouring pixels

@@ -7,12 +7,10 @@ jobs:
     name: Tests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          toolchain: stable
+        run: rustup show
 
       - name: Run Tests
         run: make test
@@ -21,13 +19,10 @@ jobs:
     name: Formatting
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          toolchain: stable
-          components: rustfmt
+        run: rustup show
 
       - name: Check Formatting
         run: make check-fmt
@@ -36,12 +31,10 @@ jobs:
     name: Linting
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          toolchain: stable
+        run: rustup show
 
       - name: Check Linting
         run: make lint
@@ -53,14 +46,12 @@ jobs:
       pull-requests: write
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          toolchain: stable
+        run: rustup show
 
-      - uses: taiki-e/install-action@v2
+      - uses: taiki-e/install-action@1ed3272338f573e042a2e6bca3893aa19f43b47a # 2.71.3
         with:
           tool: cargo-tarpaulin
 
@@ -68,7 +59,7 @@ jobs:
         run: cargo tarpaulin --out Lcov --engine llvm
 
       - name: Upload to Codecov
-        uses: codecov/codecov-action@v4.0.1
+        uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2 # v6.0.0
         with:
-          file: ./lcov.info
+          files: ./lcov.info
           token: ${{ secrets.CODECOV_TOKEN }}
