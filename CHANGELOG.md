@@ -2,9 +2,9 @@
 
 Contributors: @yannickalex07
 
-- Removed deprecated `matric()`-based methods
+- Removed deprecated `matrix()`-based methods
 - Made hasher field private and added new `new`-function to create hashers
-- Hasher now only accept `u8` instad of `u32` for the hash size
+- Hasher now only accept `u8` instead of `u32` for the hash size
 - Added proper error handling using custom errors
 - Fixed bug in DCT implementation, which might cause false hashes for non-square images
 - Updated dependencies to latest versions
