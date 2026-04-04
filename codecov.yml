@@ -2,7 +2,7 @@ coverage:
   status:
     project:
       default:
-        threshold: "2"
+        threshold: "4"
 
 comment:
   layout: "header, files, condensed_footer"

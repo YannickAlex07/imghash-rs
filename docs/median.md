@@ -22,7 +22,7 @@ Like each other hashing algorithm, the median hash algorithm has some pros and c
 
 #### Cons
 
-* Not resiliant to brightness changes
+* Not resilient to brightness changes
 
 
 ## Algorithm
@@ -44,7 +44,7 @@ At best case you want to rescale to a size that is efficient to compute while ma
 
 #### 2. Calculating Median Brightness
 
-The next step is to calculate tha median brightness for all pixels. This is a very simple median calculation for which we sort all of the pixels by brightsness and then pick the middle one.
+The next step is to calculate the median brightness for all pixels. This is a very simple median calculation for which we sort all of the pixels by brightness and then pick the middle one.
 
 #### 3. Compute the Brightness Matrix
 
@@ -62,7 +62,7 @@ $$
 \end{bmatrix}
 $$
 
-If we assume an median brightness of $096$, we get the following brightness matrix:
+If we assume a median brightness of $096$, we get the following brightness matrix:
 
 $$
 \begin{bmatrix}

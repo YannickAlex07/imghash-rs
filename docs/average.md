@@ -22,7 +22,7 @@ Like each other hashing algorithm, the average hash algorithm has some pros and 
 
 #### Cons
 
-* Not resiliant to brightness changes
+* Not resilient to brightness changes
 
 
 ## Algorithm
@@ -44,7 +44,7 @@ At best case you want to rescale to a size that is efficient to compute while ma
 
 #### 2. Calculating Average Brightness
 
-The next step is to calculate tha average brightness for all pixels. This is a very simple average calculation for which we look at the current brightness of each pixel and then just divide by the number of pixels.
+The next step is to calculate the average brightness for all pixels. This is a very simple average calculation for which we look at the current brightness of each pixel and then just divide by the number of pixels.
 
 #### 3. Compute the Brightness Matrix
 

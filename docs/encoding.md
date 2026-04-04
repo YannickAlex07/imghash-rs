@@ -7,14 +7,14 @@
 All of the Hashers in this crate returns an `ImageHash` struct that can be encoded into a hexadecimal string and vice versa.
 This document dives a bit deeper into this encoding and explains how it works.
 
-_This encoding and decoding algorithm is explicitly choosen to be compatible with the Python `imagehash` package while also supporting encoding of a non-square matrix. This was done for somewhat personal reason as this crate was set to replace the `imagehash`-package in some places. However the generated hashes by this crate are **not** strictly compatible with the `imagehash`-package._
+_This encoding and decoding algorithm is explicitly chosen to be compatible with the Python `imagehash` package while also supporting encoding of a non-square matrix. This was done for somewhat personal reason as this crate was set to replace the `imagehash`-package in some places. However the generated hashes by this crate are **not** strictly compatible with the `imagehash`-package._
 
 ## Encoding
 
 The encoding algorithm follows the following steps:
 
 1. We flatten the bit matrix into a one dimensional vector of bits
-2. Pad the entire vector with leading zeros until it is divisible by 4
+2. Pad the entire vector with leading zeros until its length is divisible by 8
 3. Go through 4 bits at a time and encode the decimal representation into a hexadecimal character
 4. Concatenate all hexadecimal characters into a single string
 

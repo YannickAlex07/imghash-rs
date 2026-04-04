@@ -19,16 +19,16 @@ Like each other hashing algorithm, the perceptual hash algorithm has some pros a
 
 #### Pros
 
-* Will be very resilities to various color changes that other hashes might fail to detect
+* Will be very resilient to various color changes that other hashes might fail to detect
 
 #### Cons
 
-* More expense to compute
+* More expensive to compute
 
 
 ## Algorithm
 
-The algorithm behind average hash is quite simple and consists of the following steps:
+The algorithm behind perceptual hash consists of the following steps:
 
 1. Grayscale and resize the input image for DCT
 2. Computing the DCT 2 for the Matrix
@@ -86,23 +86,21 @@ $$
 
 After the first pass we will receive the following result (rounded to save some space here):
 
-TODO: Update Matrix
 $$
 \begin{bmatrix}
-124 & 096 & 098\\
-076 & 089 & 189\\
-098 & 073 & 076\\
+596 & 516 & 726\\
+045 & 039 & 038\\
+070 & -08 & -204\\
 \end{bmatrix}
 $$
 
 After the second pass we will get the following result:
 
-TODO: Update Matrix
 $$
 \begin{bmatrix}
-124 & 096 & 098\\
-076 & 089 & 189\\
-098 & 073 & 076\\
+3676 & -225 & 290\\
+246 & 011 & 003\\
+-286 & 475 & -116\\
 \end{bmatrix}
 $$
 
@@ -112,7 +110,7 @@ After we computed our DCT matrix, we will need to crop it and then calculate the
 
 > Cropping is equivalent to removing high-frequency information in the DCT matrix (i.e. the parts cropped out).
 
-Essentially we just crop our upscaled matrix down to the specified size. So if we assume a target size of 2 x 2 (default is 8 x 8), the matrix
+Essentially we just crop our upscaled matrix down to the specified size. So if we assume a target size of 2 x 2 (default is 8 x 8), the matrix (as an example we use the non-transformed here as the numbers are easier to read) would look like this:
 
 $$
 \begin{bmatrix}
@@ -122,7 +120,7 @@ $$
 \end{bmatrix}
 $$
 
-would look like this after cropping:
+and after cropping it would look like this:
 
 $$
 \begin{bmatrix}
@@ -141,9 +139,8 @@ If we assume the following cropped matrix and a given median of $96$:
 
 $$
 \begin{bmatrix}
-124 & 096 & 098\\
-076 & 089 & 189\\
-098 & 073 & 076\\
+124 & 096\\
+076 & 089\\
 \end{bmatrix}
 $$
 
@@ -151,9 +148,8 @@ We would get the following resulting matrix:
 
 $$
 \begin{bmatrix}
-true & false & true\\
-false & false & true\\
-true & false & false\\
+true & false\\
+false & false\\
 \end{bmatrix}
 $$
 

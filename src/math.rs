@@ -5,50 +5,76 @@ pub enum Axis {
     Column,
 }
 
-/// Computes the DCT 2 for a given slice of floats in-place.
+/// Computes the DCT Type-II for a given slice of floats in-place.
 ///
-/// The implementation follows the SciPy implementation.
-/// https://docs.scipy.org/doc/scipy/reference/generated/scipy.fftpack.dct.html
+/// The Discrete Cosine Transform (DCT) converts spatial data (like pixel values)
+/// into frequency components. Low-frequency components capture the overall structure
+/// of the signal, while high-frequency components capture fine detail. This property
+/// is what makes DCT useful for perceptual hashing: by keeping only the low-frequency
+/// components, we get a compact representation of the image's structure that is robust
+/// to small changes.
+///
+/// The formula implemented is (following SciPy's convention):
+///
+///   Y[k] = 2 * sum_{i=0}^{N-1} x[i] * cos(pi * k * (2i + 1) / (2N))
+///
+/// where N is the number of elements and k is the output frequency index.
+///
+/// See: https://docs.scipy.org/doc/scipy/reference/generated/scipy.fftpack.dct.html
 ///
 /// # Arguments
-/// * `input`: A mutable reference to a slice of floats.
-/// * `skip`: The number of elements to skip between each DCT value.
-///           This is used to iterate the elements column-wise.
+/// * `input`: A mutable reference to a slice of floats. Results are written back here.
+/// * `skip`: Stride between elements. Use `1` for contiguous (row-wise) data, or
+///   `width` to step through a single column of a row-major matrix.
+/// * `buf`: Temporary buffer for intermediate results. Must be at least N elements long.
 pub fn dct2_in_place(input: &mut [f64], skip: usize, buf: &mut [f64]) {
-    if skip == 0 {
-        panic!("Skip value must be greater than 0");
-    }
+    // Internal invariant: all callers control `skip` directly (1 for rows, `width` for columns).
+    // A zero skip is a programming bug, not a recoverable error.
+    assert!(skip > 0, "skip value must be greater than 0");
 
-    // we cannot compute the DCT for an empty input
     if input.is_empty() {
         return;
     }
 
-    let n = (input.len() + skip - 1) / skip;
+    // Number of logical elements to transform.
+    // When skip > 1 (column mode), elements are spaced `skip` apart in the flat array,
+    // so we divide the total length by the stride to get the element count.
+    let n = input.len().div_ceil(skip);
 
-    if n > buf.len() {
-        panic!("Buffer is too small for the DCT result");
-    }
+    // Internal invariant: callers are responsible for allocating a buffer that fits the result.
+    // A too-small buffer is a programming bug, not a recoverable error.
+    assert!(n <= buf.len(), "buffer is too small for the DCT result");
 
+    // For each output frequency index k, compute the DCT coefficient.
+    // Each coefficient is a weighted sum of all input values, where the weights
+    // are cosine basis functions at increasing frequencies.
     (0..n)
         .map(|k| {
-            2 as f64
-                * input
-                    .chunks(skip)
-                    .enumerate()
-                    .map(|(i, x)| {
-                        let numerator = std::f64::consts::PI * k as f64 * (2 * i + 1) as f64;
-                        let denominator = (2 * n) as f64;
+            2.0 * input
+                // chunks(skip) gives us windows of `skip` elements; we only use
+                // the first element of each chunk (x[0]), effectively stepping
+                // through the array with the given stride.
+                .chunks(skip)
+                .enumerate()
+                .map(|(i, x)| {
+                    // cos(pi * k * (2i+1) / 2N) is the DCT-II basis function.
+                    // - k selects the frequency (0 = DC / average, higher = finer detail)
+                    // - i is the position of the current input sample
+                    let numerator = std::f64::consts::PI * k as f64 * (2 * i + 1) as f64;
+                    let denominator = (2 * n) as f64;
 
-                        let cosine = (numerator / denominator).cos();
+                    let cosine = (numerator / denominator).cos();
 
-                        x[0] * cosine
-                    })
-                    .sum::<f64>()
+                    x[0] * cosine
+                })
+                .sum::<f64>()
         })
         .enumerate()
         .for_each(|(i, value)| buf[i] = value);
 
+    // Copy the results from the temporary buffer back into `input`,
+    // respecting the original stride so that column-mode writes go
+    // to the correct positions in the matrix.
     input
         .chunks_mut(skip)
         .zip(buf.iter().copied())
@@ -57,31 +83,38 @@ pub fn dct2_in_place(input: &mut [f64], skip: usize, buf: &mut [f64]) {
         });
 }
 
-/// Computes the DCT 2 in-place over a matrix.
-/// The axis controls if the DCT is computed over the columns or over each column.
+/// Computes the DCT Type-II in-place over a 2D matrix stored as a flat array (row-major).
+///
+/// For perceptual hashing, this is typically applied twice: once along rows, then along
+/// columns (or vice versa), to produce a 2D DCT. The top-left corner of the result
+/// contains the lowest-frequency components that summarize the image's overall structure.
 ///
 /// # Arguments
-/// * `input`: A reference to a matrix of floats
-/// * `width`: The width of the matrix
-/// * `axis`: The axis over which to compute the DCT 2
+/// * `input`: A flat row-major matrix of floats (length = rows * width).
+/// * `width`: The number of columns in the matrix.
+/// * `axis`: Which direction to apply the DCT:
+///   - `Axis::Row`: transform each row independently (left-to-right frequencies).
+///   - `Axis::Column`: transform each column independently (top-to-bottom frequencies).
 pub fn dct2_over_matrix_in_place(input: &mut [f64], width: usize, axis: Axis) {
-    // we cannot compute the DCT for an empty matrix
     if input.is_empty() || width == 0 {
         return;
     }
 
     match axis {
         Axis::Row => {
+            // Process each row as a contiguous slice of `width` elements.
+            // skip=1 because elements within a row are adjacent in memory.
             let buf = &mut vec![0.0; width];
-            input
-                .chunks_mut(width)
-                .for_each(|row| dct2_in_place(row, 1, buf))
+            for row in input.chunks_mut(width) {
+                dct2_in_place(row, 1, buf);
+            }
         }
         Axis::Column => {
+            // To process a column in a row-major layout, we start at the column's
+            // index (n) and skip `width` elements to reach the next row's value in
+            // the same column. The `skip` parameter of dct2_in_place handles this stride.
             let buf = &mut vec![0.0; input.len() / width];
-
-            // Step each column of the matrix, skipping `width` elements
-            for n in 0..(input.len() / width) {
+            for n in 0..width {
                 dct2_in_place(&mut input[n..], width, buf);
             }
         }
@@ -103,7 +136,7 @@ pub fn median(input: impl IntoIterator<Item = f64>) -> Option<f64> {
         return None;
     }
 
-    sorted.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    sorted.sort_by(|a, b| a.total_cmp(b));
 
     let mid = sorted.len() / 2;
     if sorted.len() % 2 == 0 {
@@ -149,6 +182,22 @@ mod tests {
 
         // Assert
         assert_eq!(input, vec![]);
+    }
+
+    #[test]
+    #[should_panic(expected = "skip value must be greater than 0")]
+    fn test_dct2_with_zero_skip() {
+        let mut input = vec![1., 2., 3.];
+        let buf = &mut vec![0.0; input.len()];
+        dct2_in_place(&mut input, 0, buf);
+    }
+
+    #[test]
+    #[should_panic(expected = "buffer is too small")]
+    fn test_dct2_with_small_buffer() {
+        let mut input = vec![1., 2., 3., 4.];
+        let buf = &mut [0.0; 1];
+        dct2_in_place(&mut input, 1, buf);
     }
 
     #[test]
@@ -265,6 +314,18 @@ mod tests {
 
         // Assert
         assert_eq!(result, Some(3.));
+    }
+
+    #[test]
+    fn test_median_with_single_element() {
+        // Arrange
+        let input = vec![42.0];
+
+        // Act
+        let result = median(input);
+
+        // Assert
+        assert_eq!(result, Some(42.0));
     }
 
     #[test]

@@ -1,26 +1,59 @@
-use crate::{imageops::ImageOps, ColorSpace, ImageHash, ImageHasher};
+use crate::{imageops::convert, ColorSpace, ImageHash, ImageHashError, ImageHasher};
 
 #[derive(Debug, Clone)]
 pub struct AverageHasher {
     /// The target width of the matrix
-    pub width: u32,
+    width: u8,
 
     /// The target height of the matrix
-    pub height: u32,
+    height: u8,
 
     /// The color space which will be used for grayscaling.
     /// Default is Rec. 601
-    pub color_space: ColorSpace,
+    color_space: ColorSpace,
+}
+
+impl AverageHasher {
+    pub fn new(width: u8, height: u8, color_space: ColorSpace) -> Result<Self, ImageHashError> {
+        if width == 0 || height == 0 {
+            return Err(ImageHashError::EmptyMatrix);
+        }
+
+        Ok(Self {
+            width,
+            height,
+            color_space,
+        })
+    }
+
+    pub fn width(&self) -> u8 {
+        self.width
+    }
+
+    pub fn height(&self) -> u8 {
+        self.height
+    }
+
+    pub fn color_space(&self) -> ColorSpace {
+        self.color_space
+    }
 }
 
 impl ImageHasher for AverageHasher {
-    fn hash_from_img(&self, img: &image::DynamicImage) -> ImageHash {
-        let converted = self.convert(img, self.width, self.height, self.color_space);
+    fn hash_from_img(&self, img: &image::DynamicImage) -> Result<ImageHash, ImageHashError> {
+        if self.width == 0 || self.height == 0 {
+            return Err(ImageHashError::EmptyMatrix);
+        }
+
+        let width = self.width as u32;
+        let height = self.height as u32;
+
+        let converted = convert(img, width, height, self.color_space);
         let mean = converted
             .as_bytes()
             .iter()
             .fold(0, |acc, x| acc + *x as usize)
-            / (self.width as usize * self.height as usize);
+            / (width as usize * height as usize);
 
         ImageHash::from_bool_iter(
             converted.as_bytes().iter().map(|&p| p as usize > mean),
@@ -40,8 +73,6 @@ impl Default for AverageHasher {
     }
 }
 
-impl ImageOps for AverageHasher {}
-
 #[cfg(test)]
 mod tests {
     use std::path::Path;
@@ -57,6 +88,28 @@ mod tests {
     const REC_709_HASH: &str = "ffffff0e00000301";
 
     #[test]
+    fn test_new_with_zero_width() {
+        let result = AverageHasher::new(0, 8, ColorSpace::REC601);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_new_with_zero_height() {
+        let result = AverageHasher::new(8, 0, ColorSpace::REC601);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_new_with_valid_dimensions() {
+        let result = AverageHasher::new(8, 8, ColorSpace::REC601);
+        assert!(result.is_ok());
+        let hasher = result.unwrap();
+        assert_eq!(hasher.width(), 8);
+        assert_eq!(hasher.height(), 8);
+        assert_eq!(hasher.color_space(), ColorSpace::REC601);
+    }
+
+    #[test]
     fn test_average_hash_from_img() {
         // Arrange
         let img = ImageReader::open(Path::new(TEST_IMG))
@@ -64,15 +117,14 @@ mod tests {
             .decode()
             .unwrap();
 
-        let hasher = AverageHasher {
-            ..Default::default()
-        };
+        let hasher = AverageHasher::default();
 
         // Act
         let hash = hasher.hash_from_img(&img);
 
         // Assert
-        assert_eq!(hash.encode(), REC_601_HASH)
+        assert!(hash.is_ok());
+        assert_eq!(hash.unwrap().encode().unwrap(), REC_601_HASH)
     }
 
     #[test]
@@ -83,66 +135,69 @@ mod tests {
             .decode()
             .unwrap();
 
-        let hasher = AverageHasher {
-            color_space: ColorSpace::REC709,
-            ..Default::default()
-        };
+        let hasher = AverageHasher::new(8, 8, ColorSpace::REC709).unwrap();
 
         // Act
         let hash = hasher.hash_from_img(&img);
 
         // Assert
-        assert_eq!(hash.encode(), REC_709_HASH)
+        assert!(hash.is_ok());
+        assert_eq!(hash.unwrap().encode().unwrap(), REC_709_HASH)
     }
 
     #[test]
     fn test_average_hash_from_path() {
         // Arrange
-        let hasher = AverageHasher {
-            ..Default::default()
-        };
+        let hasher = AverageHasher::default();
 
         // Act
         let hash = hasher.hash_from_path(Path::new(TEST_IMG));
 
         // Assert
-        match hash {
-            Ok(hash) => assert_eq!(hash.encode(), REC_601_HASH),
-            Err(err) => panic!("could not read image: {:?}", err),
-        }
+        assert!(hash.is_ok());
+        assert_eq!(hash.unwrap().encode().unwrap(), REC_601_HASH)
+    }
+
+    #[test]
+    fn test_average_hash_from_img_with_non_default_size() {
+        // Arrange
+        let img = ImageReader::open(Path::new(TEST_IMG))
+            .unwrap()
+            .decode()
+            .unwrap();
+
+        let hasher = AverageHasher::new(16, 16, ColorSpace::REC601).unwrap();
+
+        // Act
+        let hash = hasher.hash_from_img(&img);
+
+        // Assert
+        assert!(hash.is_ok());
+        let hash = hash.unwrap();
+        assert_eq!(hash.shape(), (16, 16));
     }
 
     #[test]
     fn test_average_hash_from_nonexisting_path() {
         // Arrange
-        let hasher = AverageHasher {
-            ..Default::default()
-        };
+        let hasher = AverageHasher::default();
 
         // Act
         let hash = hasher.hash_from_path(Path::new("./does/not/exist.png"));
 
         // Assert
-        match hash {
-            Ok(hash) => panic!("found hash for non-existing image: {:?}", hash),
-            Err(_) => (),
-        }
+        assert!(hash.is_err());
     }
 
     #[test]
     fn test_average_hash_from_txt_file() {
         // Arrange
-        let hasher = AverageHasher {
-            ..Default::default()
-        };
+        let hasher = AverageHasher::default();
 
         // Act
         let hash = hasher.hash_from_path(Path::new(TXT_FILE));
 
         // Assert
-        match hash {
-            Ok(hash) => panic!("found hash for non-existing image: {:?}", hash),
-            Err(_) => (),
-        }
+        assert!(hash.is_err());
     }
 }
