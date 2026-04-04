@@ -110,7 +110,7 @@ After we computed our DCT matrix, we will need to crop it and then calculate the
 
 > Cropping is equivalent to removing high-frequency information in the DCT matrix (i.e. the parts cropped out).
 
-Essentially we just crop our upscaled matrix down to the specified size. So if we assume a target size of 2 x 2 (default is 8 x 8), the matrix (as an exmaple we use the non-transformed here as the numbers are easier to read) would look like this:
+Essentially we just crop our upscaled matrix down to the specified size. So if we assume a target size of 2 x 2 (default is 8 x 8), the matrix (as an example we use the non-transformed here as the numbers are easier to read) would look like this:
 
 $$
 \begin{bmatrix}

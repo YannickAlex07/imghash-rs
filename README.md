@@ -42,7 +42,7 @@ let perceptual = perceptual_hash(path);
 Each of these functions return a `Result<ImageHash, ImageHashError>`-type. The `ImageHash` object is essentially a container for the encoded bit matrix of the image (learn more [here](./docs/encoding.md)). The `ImageHash` can be encoded into hexadecimal string by calling the `encode`-method:
 
 ```rust
-let res: String = hash.encode();
+let res: String = hash.encode()?;
 ```
 
 ### Encoding & Decoding

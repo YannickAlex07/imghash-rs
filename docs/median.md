@@ -44,7 +44,7 @@ At best case you want to rescale to a size that is efficient to compute while ma
 
 #### 2. Calculating Median Brightness
 
-The next step is to calculate the median brightness for all pixels. This is a very simple median calculation for which we sort all of the pixels by brightsness and then pick the middle one.
+The next step is to calculate the median brightness for all pixels. This is a very simple median calculation for which we sort all of the pixels by brightness and then pick the middle one.
 
 #### 3. Compute the Brightness Matrix
 
