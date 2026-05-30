@@ -30,7 +30,7 @@ jobs:
       - name: Setup Rust
         run: rustup show
 
-      - uses: taiki-e/install-action@f48d2f8ba2b452934c948b7be1a768079c3632ff # 2.79.6
+      - uses: taiki-e/install-action@50b4a718b59c718df4ef27a3b445f86cd57b9f00 # 2.80.0
         with:
           tool: cargo-tarpaulin
 
