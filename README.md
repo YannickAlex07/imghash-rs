@@ -1,3 +1,5 @@
+
+
 # `imghash` - Image Hashing for Rust
 
 [![Crates.io Version](https://img.shields.io/crates/v/imghash)](https://crates.io/crates/imghash)
@@ -66,7 +68,7 @@ The first argument of the hash is the string, the second and third are the width
 The hamming distance is the distance of two hashes defined by the number of bits that differ between them. This distance can be easily computed:
 
 ```rust
-let distance: Result<usize, ImageHashError> = hash.distance(other_hash);
+let distance: Result<usize, ImageHashError> = hash.distance(&other_hash);
 ```
 
 This can produce an error if the hashes are not of the same size.
